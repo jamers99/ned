@@ -1,9 +1,8 @@
 <script lang="ts">
-  import Icon from '../components/Icon.svelte';
+  import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { addEvent, startRunning, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
-  import { rise } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { latestRunning } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -80,88 +79,68 @@
   }
 </script>
 
-<div class="overlay" transition:rise>
-  <div class="screen">
-    <header class="screen-header">
-      <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
-      <div class="screen-title">Feed</div>
-      <div style:width="44px"></div>
-    </header>
+<Overlay title="Feed">
+  <div class="segments" role="tablist">
+    <span class="thumb" class:second={kind === 'Bottle'}></span>
+    {#each ['Nursing', 'Bottle'] as option (option)}
+      <button role="tab" aria-selected={kind === option} class:on={kind === option} disabled={!!feed && option === 'Bottle'}
+        onclick={() => choose(option as FeedKind)}>{option}</button>
+    {/each}
+  </div>
 
-    <div class="segments" role="tablist">
-      <span class="thumb" class:second={kind === 'Bottle'}></span>
-      {#each ['Nursing', 'Bottle'] as option (option)}
-        <button role="tab" aria-selected={kind === option} class:on={kind === option} disabled={!!feed && option === 'Bottle'}
-          onclick={() => choose(option as FeedKind)}>{option}</button>
+  {#if kind === 'Nursing'}
+    <section class="total">
+      <div class="total-label">Total</div>
+      <div class="big serif">{stopwatch((seconds('Left') + seconds('Right')) * 1000)}</div>
+      {#if lastNursing?.StartSide}
+        <div class="last">
+          Last feed started on the {lastNursing.StartSide.toLowerCase()} · {duration(now - lastNursing.Start)} ago
+        </div>
+      {/if}
+    </section>
+
+    <div class="sides">
+      {#each ['Left', 'Right'] as const as side (side)}
+        {@const active = feed?.ActiveSide === side}
+        <button class="side" class:active onclick={() => tap(side)}>
+          <span class="side-name">{side}</span>
+          <span class="side-time serif">{stopwatch(seconds(side) * 1000)}</span>
+          <span class="side-hint">{active ? 'Tap to pause' : 'Tap to start'}</span>
+        </button>
       {/each}
     </div>
 
-    {#if kind === 'Nursing'}
-      <section class="total">
-        <div class="total-label">Total</div>
-        <div class="big serif">{stopwatch((seconds('Left') + seconds('Right')) * 1000)}</div>
-        {#if lastNursing?.StartSide}
-          <div class="last">
-            Last feed started on the {lastNursing.StartSide.toLowerCase()} · {duration(now - lastNursing.Start)} ago
-          </div>
-        {/if}
-      </section>
-
-      <div class="sides">
-        {#each ['Left', 'Right'] as const as side (side)}
-          {@const active = feed?.ActiveSide === side}
-          <button class="side" class:active onclick={() => tap(side)}>
-            <span class="side-name">{side}</span>
-            <span class="side-time serif">{stopwatch(seconds(side) * 1000)}</span>
-            <span class="side-hint">{active ? 'Tap to pause' : 'Tap to start'}</span>
-          </button>
-        {/each}
-      </div>
-
-      {#if feed}
-        <div class="adjust">
-          <button class="pill" onclick={() => nudge(-60)}>−1 min</button>
-          <button class="pill" onclick={() => nudge(60)}>+1 min</button>
-          <TimeInput class="pill" value={feed.Start} onchange={setStart} label="Feed start time">
-            Started {clockShort(feed.Start)}
-          </TimeInput>
-        </div>
-      {/if}
-
-      <button class="primary-dark save" onclick={done}>{feed ? 'Done · save feed' : 'Close'}</button>
-    {:else}
-      <section class="total">
-        <div class="total-label">Bottle</div>
-        <div class="stepper">
-          <button class="round-button big-step" aria-label="Less" onclick={() => (bottleOz = Math.max(0.5, bottleOz - 0.5))}>−</button>
-          <div class="big serif">{bottleOz} oz</div>
-          <button class="round-button big-step" aria-label="More" onclick={() => (bottleOz += 0.5)}>+</button>
-        </div>
-      </section>
+    {#if feed}
       <div class="adjust">
-        <TimeInput class="pill" value={bottleTime} onchange={t => (bottleTime = t > Date.now() ? t - day : t)}
-          label="Bottle time">
-          At {clockTime(bottleTime)}
+        <button class="pill" onclick={() => nudge(-60)}>−1 min</button>
+        <button class="pill" onclick={() => nudge(60)}>+1 min</button>
+        <TimeInput class="pill" value={feed.Start} onchange={setStart} label="Feed start time">
+          Started {clockShort(feed.Start)}
         </TimeInput>
       </div>
-      <button class="primary-dark save" onclick={saveBottle}>Save bottle</button>
     {/if}
-  </div>
-</div>
+
+    <button class="primary-dark save" onclick={done}>{feed ? 'Done · save feed' : 'Close'}</button>
+  {:else}
+    <section class="total">
+      <div class="total-label">Bottle</div>
+      <div class="stepper">
+        <button class="round-button big-step" aria-label="Less" onclick={() => (bottleOz = Math.max(0.5, bottleOz - 0.5))}>−</button>
+        <div class="big serif">{bottleOz} oz</div>
+        <button class="round-button big-step" aria-label="More" onclick={() => (bottleOz += 0.5)}>+</button>
+      </div>
+    </section>
+    <div class="adjust">
+      <TimeInput class="pill" value={bottleTime} onchange={t => (bottleTime = t > Date.now() ? t - day : t)}
+        label="Bottle time">
+        At {clockTime(bottleTime)}
+      </TimeInput>
+    </div>
+    <button class="primary-dark save" onclick={saveBottle}>Save bottle</button>
+  {/if}
+</Overlay>
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    overflow-y: auto;
-    background: var(--ground);
-  }
-
-  .screen {
-    gap: 20px;
-  }
-
   .segments {
     position: relative;
     display: grid;
@@ -173,6 +152,7 @@
   }
 
   .segments button {
+    position: relative;
     height: 44px;
     border-radius: 12px;
     border: 0;
@@ -180,10 +160,6 @@
     color: var(--muted);
     font-size: 15px;
     font-weight: 700;
-  }
-
-  .segments button {
-    position: relative;
   }
 
   .segments button.on {

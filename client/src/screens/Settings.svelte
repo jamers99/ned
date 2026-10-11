@@ -1,11 +1,10 @@
 <script lang="ts">
-  import Icon from '../components/Icon.svelte';
+  import Overlay from '../components/Overlay.svelte';
   import { updateSettings } from '../lib/actions.ts';
   import { signOut } from '../lib/auth.ts';
   import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
   import { settingsGuid } from '../lib/ids.ts';
   import { diagnostics } from '../lib/diagnostics.svelte.ts';
-  import { rise } from '../lib/motion.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { defaultTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
@@ -46,85 +45,68 @@
   }
 </script>
 
-<div class="overlay" transition:rise>
-  <div class="screen">
-    <header class="screen-header">
-      <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
-      <div class="screen-title">Settings</div>
-      <div style:width="44px"></div>
-    </header>
-
-    <section class="card list">
-      <div class="eyebrow">Wake windows</div>
-      {#each rows as { key, label, step: size, show } (key)}
-        <div class="row">
-          <span>{label}</span>
-          <button class="round-button" aria-label="{label} less" onclick={() => step(key, -size)}>−</button>
-          <span class="value serif">{show(targets[key])}</span>
-          <button class="round-button" aria-label="{label} more" onclick={() => step(key, size)}>+</button>
-        </div>
-      {/each}
-    </section>
-
-    <section class="card list">
-      <div class="eyebrow">Sync</div>
-      <div class="status">
-        {#if status.needsSignIn}
-          Signed out — <button class="inline" onclick={() => open({ kind: 'signin' })}>sign in to sync</button>
-        {:else}
-          {status.syncing ? 'Syncing…' : status.lastSyncedAt ? `Synced at ${clockTime(status.lastSyncedAt)}` : 'Not synced yet'}
-        {/if}
+<Overlay title="Settings">
+  <section class="card list">
+    <div class="eyebrow">Wake windows</div>
+    {#each rows as { key, label, step: size, show } (key)}
+      <div class="row">
+        <span>{label}</span>
+        <button class="round-button" aria-label="{label} less" onclick={() => step(key, -size)}>−</button>
+        <span class="value serif">{show(targets[key])}</span>
+        <button class="round-button" aria-label="{label} more" onclick={() => step(key, size)}>+</button>
       </div>
-      {#if status.error}<div class="error">{status.error}</div>{/if}
-      <table>
-        <thead><tr><th>Table</th><th>Rows</th><th>To push</th><th>Pulled to</th></tr></thead>
-        <tbody>
-          {#each tables.value as t (t.table)}
-            <tr>
-              <td>{t.table}</td>
-              <td>{t.rows}</td>
-              <td>{t.dirty}</td>
-              <td>{t.cursor ? new Date(t.cursor).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-      <button class="chip" onclick={() => syncNow()}>Sync now</button>
-    </section>
+    {/each}
+  </section>
 
-    <section class="card list">
-      <div class="eyebrow">Diagnostics</div>
-      <div class="diagnostic">{navigator.userAgent}</div>
-      {#each diagnostics.log as entry, i (i)}
-        <div class="diagnostic">
-          {new Date(entry.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ·
-          {entry.message}
-        </div>
+  <section class="card list">
+    <div class="eyebrow">Sync</div>
+    <div class="status">
+      {#if status.needsSignIn}
+        Signed out — <button class="inline" onclick={() => open({ kind: 'signin' })}>sign in to sync</button>
       {:else}
-        <div class="diagnostic">Nothing yet.</div>
-      {/each}
-    </section>
-
-    <section class="card list">
-      <div class="eyebrow">Signed in as {status.user}</div>
-      <button class="chip" onclick={leave}>Sign out</button>
-    </section>
-
-    <div class="version">
-      Version {new Date(__BUILD_TIME__).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+        {status.syncing ? 'Syncing…' : status.lastSyncedAt ? `Synced at ${clockTime(status.lastSyncedAt)}` : 'Not synced yet'}
+      {/if}
     </div>
+    {#if status.error}<div class="error">{status.error}</div>{/if}
+    <table>
+      <thead><tr><th>Table</th><th>Rows</th><th>To push</th><th>Pulled to</th></tr></thead>
+      <tbody>
+        {#each tables.value as t (t.table)}
+          <tr>
+            <td>{t.table}</td>
+            <td>{t.rows}</td>
+            <td>{t.dirty}</td>
+            <td>{t.cursor ? new Date(t.cursor).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    <button class="chip" onclick={() => syncNow()}>Sync now</button>
+  </section>
+
+  <section class="card list">
+    <div class="eyebrow">Diagnostics</div>
+    {#each diagnostics.log as entry, i (i)}
+      <div class="diagnostic">
+        {new Date(entry.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ·
+        {entry.message}
+      </div>
+    {:else}
+      <div class="diagnostic">Nothing yet.</div>
+    {/each}
+  </section>
+
+  <section class="card list">
+    <div class="eyebrow">Signed in as {status.user}</div>
+    <button class="chip" onclick={leave}>Sign out</button>
+  </section>
+
+  <div class="version">
+    Version {new Date(__BUILD_TIME__).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
   </div>
-</div>
+</Overlay>
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    overflow-y: auto;
-    background: var(--ground);
-  }
-
   .list {
     padding: 18px;
     display: flex;

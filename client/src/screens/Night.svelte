@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { appear } from '../lib/motion.ts';
   import { startRunning, startSleep, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy } from '../lib/db.ts';
+  import { settleChoices } from '../lib/describe.ts';
+  import { appear } from '../lib/motion.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { latestRunning, timeAsleep, wakingsDuring } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -13,8 +14,6 @@
   const sleep = $derived(latestRunning(events, 'Sleep'));
   const wakings = $derived(sleep ? wakingsDuring(sleep, events) : []);
   const waking = $derived(wakings.find(w => w.End == null));
-
-  const settleOptions: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', 'On her own']];
 
   function settled(by: SettledBy) {
     if (waking) void updateEvent(waking.Guid, { End: Date.now(), SettledBy: by });
@@ -42,7 +41,7 @@
       <div class="dim small">Slept {duration(timeAsleep(sleep, wakings, waking.Start))} before this</div>
     </section>
     <div class="dim label">Back to sleep by</div>
-    {#each settleOptions as [value, text] (value)}
+    {#each settleChoices as [value, text] (value)}
       <button class="huge" onclick={() => settled(value)}>{text}</button>
     {/each}
   {:else if sleep}

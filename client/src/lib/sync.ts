@@ -1,5 +1,5 @@
 import { db, getMeta, setMeta, syncedTable, syncedTables, type Synced, type SyncedTable } from './db.ts';
-import { apiFetch, messageFrom, SignInRequired } from './auth.ts';
+import { apiFetch, errorText, messageFrom, SignInRequired } from './auth.ts';
 import { status } from './state.svelte.ts';
 import { entitySets, fields, fromServer, parseInstant, toServer } from './wire.ts';
 
@@ -178,15 +178,4 @@ async function merge(table: SyncedTable, serverRows: Record<string, unknown>[]) 
     const changed = serverRows.filter((row, i) => !locals[i]?.dirty && locals[i]?.ModifiedAt !== row.ModifiedAt);
     await rows.bulkPut(changed.map(row => fromServer(table, row) as unknown as Synced));
   });
-}
-
-function errorText(body: unknown): string {
-  const first = Array.isArray(body) ? body[0] : body;
-  if (typeof first === 'string') return first;
-  return (first as { text?: string } | undefined)?.text ?? '';
-}
-
-export async function dirtyCount(): Promise<number> {
-  const counts = await Promise.all(syncedTables.map(table => syncedTable(table).where('dirty').above(0).count()));
-  return counts.reduce((a, b) => a + b, 0);
 }

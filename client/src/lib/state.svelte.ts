@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie';
-import { note, startWaiting, stopWaiting } from './diagnostics.svelte.ts';
+import { reportProblem } from './diagnostics.svelte.ts';
 
 /** One shared clock for every running timer. Timers render from start times, never by accumulating. */
 export const clock = $state({ now: Date.now() });
@@ -27,15 +27,6 @@ export function startClock() {
   document.addEventListener('visibilitychange', update);
 }
 
-export function reportProblem(error: unknown) {
-  note(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
-}
-
-export function watchForProblems() {
-  addEventListener('error', event => reportProblem(event.error ?? event.message));
-  addEventListener('unhandledrejection', event => reportProblem(event.reason));
-}
-
 /**
  * Keeps a value in sync with a Dexie query. `deps` reads the reactive values the query depends on,
  * so the query re-runs when they change. Call it while a component initializes.
@@ -47,18 +38,11 @@ export function live<T, D = undefined>(query: (deps: D) => Promise<T>, initial: 
     // copy on screen, and every read after it. So hidden copies don't read; they keep their last value.
     if (!onScreen) return;
     const current = deps?.() as D;
-    const ticket = startWaiting();
     const subscription = liveQuery(() => query(current)).subscribe({
-      next: result => {
-        stopWaiting(ticket);
-        value = result;
-      },
+      next: result => (value = result),
       error: reportProblem
     });
-    return () => {
-      stopWaiting(ticket);
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   });
   return {
     get value() {

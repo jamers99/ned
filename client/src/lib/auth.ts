@@ -112,11 +112,15 @@ function withToken(init: RequestInit): RequestInit {
 export async function messageFrom(response: Response): Promise<string> {
   const text = await response.text();
   try {
-    const body = JSON.parse(text);
-    if (typeof body === 'string') return body;
-    const first = Array.isArray(body) ? body[0] : body;
-    return first?.text ?? first?.message ?? text;
+    return errorText(JSON.parse(text)) || text;
   } catch {
     return text;
   }
+}
+
+/** The message in a Core error body: a string, `{ text }` or `{ message }`, or a list of those. */
+export function errorText(body: unknown): string {
+  const first = Array.isArray(body) ? body[0] : body;
+  if (typeof first === 'string') return first;
+  return first?.text ?? first?.message ?? '';
 }

@@ -1,7 +1,7 @@
 // Every local write goes through here: write to Dexie, mark the row dirty, and schedule a push.
 // The UI re-renders from Dexie, so nothing waits on the network.
 import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings } from './db.ts';
-import { foodGuid, newGuid, settingsGuid } from './ids.ts';
+import { foodGuid, settingsGuid } from './ids.ts';
 import { defaultTargets, isNightTime } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
@@ -18,7 +18,7 @@ function editStamp(): number {
 export function newEvent(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type'>): BabyEvent {
   const start = fields.Start ?? Date.now();
   return {
-    Guid: newGuid(),
+    Guid: crypto.randomUUID(),
     ModifiedAt: '',
     Deleted: false,
     LoggedBy: status.user,
@@ -116,7 +116,7 @@ export async function saveGrowth(growth: Omit<Growth, 'Guid' | 'ModifiedAt' | 'D
     ModifiedAt: '', Deleted: false, LoggedBy: status.user,
     ...existing,
     ...growth,
-    Guid: growth.Guid ?? newGuid(),
+    Guid: growth.Guid ?? crypto.randomUUID(),
     dirty: editStamp()
   });
   scheduleSync();

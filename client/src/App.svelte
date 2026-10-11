@@ -1,7 +1,6 @@
 <script lang="ts">
   import TabBar from './components/TabBar.svelte';
   import { db, type BabyEvent, type Settings as SettingsRow } from './lib/db.ts';
-  import { diagnostics } from './lib/diagnostics.svelte.ts';
   import { settingsGuid } from './lib/ids.ts';
   import { nav, open } from './lib/nav.svelte.ts';
   import { defaultTargets, latestRunning } from './lib/sleep.ts';
@@ -37,12 +36,6 @@
     document.body.style.background = color;
   });
 
-  const stuckMessages = {
-    tab: 'Kennedy is also open in a browser tab, and it is holding things up. Close that tab and this will catch up.',
-    copy: 'Kennedy is open twice, and the other copy is holding things up. Close it and this will catch up.',
-    database: "The phone's database stopped answering. Close the app fully and reopen it."
-  };
-
   // Between 7 PM and 6 AM, opening the app during a night sleep goes straight to the dim night screen.
   let checkedOnOpen = false;
   function suggestNightMode() {
@@ -55,20 +48,15 @@
       suggestNightMode();
     }
   });
-  $effect(() => {
-    const onVisible = () => document.visibilityState === 'visible' && suggestNightMode();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  });
 </script>
+
+<svelte:document onvisibilitychange={() => document.visibilityState === 'visible' && suggestNightMode()} />
 
 {#if !status.user}
   <SignIn />
 {:else if recent.value}
   <main class:dark>
-    {#if diagnostics.stuck}
-      <div class="banner">{stuckMessages[diagnostics.stuck]}</div>
-    {:else if status.needsSignIn}
+    {#if status.needsSignIn}
       <button class="banner" onclick={() => open({ kind: 'signin' })}>Sign in to sync</button>
     {/if}
     {#if nav.tab === 'now'}
@@ -106,9 +94,6 @@
   main {
     min-height: 100%;
     padding-bottom: calc(var(--safe-bottom) + 72px);
-  }
-
-  main {
     transition: background-color var(--quick);
   }
 

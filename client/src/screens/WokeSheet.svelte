@@ -35,11 +35,11 @@
     <div class="times">
       <TimeInput class="time" value={sleep.Start} onchange={setStart} label="Fell asleep at">
         <span class="time-label">Fell asleep</span>
-        <span class="time-value serif">{clockTime(sleep.Start)}</span>
+        <span class="time-value">{clockTime(sleep.Start)}</span>
       </TimeInput>
       <TimeInput class="time" value={sleep.End} onchange={setEnd} label="Woke at">
         <span class="time-label">Woke</span>
-        <span class="time-value serif">{clockTime(sleep.End)}</span>
+        <span class="time-value">{clockTime(sleep.End)}</span>
       </TimeInput>
     </div>
 
@@ -91,35 +91,6 @@
     font-weight: 400;
     letter-spacing: -0.02em;
     line-height: 1.05;
-  }
-
-  .times {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .times :global(.time) {
-    height: 66px;
-    border-radius: 18px;
-    border: 1px solid var(--line);
-    background: var(--ground);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 16px;
-    gap: 2px;
-  }
-
-  .time-label {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--muted);
-  }
-
-  .time-value {
-    font-size: 22px;
-    font-weight: 600;
   }
 
   .moods {

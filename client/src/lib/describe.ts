@@ -6,6 +6,10 @@ export const onsetText: Record<SleepOnset, string> = { Own: 'on her own', Fed: '
 export const settledText: Record<SettledBy, string> = { Feeding: 'feeding', Soothing: 'soothing', Own: 'on her own' };
 export const amountText: Record<SolidAmount, string> = { Taste: 'a taste', Some: 'some', All: 'all of it' };
 
+// Chip labels, in the order the chips appear.
+export const onsetChoices: [SleepOnset, string][] = [['Own', 'On her own'], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
+export const settleChoices: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', 'On her own']];
+
 /** Title and detail lines for an event row on the Day screen. */
 export function describe(e: BabyEvent, now: number): { label: string; meta: string; time: string } {
   const time = clock(e.Start);

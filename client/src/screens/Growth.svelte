@@ -1,11 +1,9 @@
 <script lang="ts">
-  import Icon from '../components/Icon.svelte';
   import LineChart from '../components/LineChart.svelte';
+  import Overlay from '../components/Overlay.svelte';
   import Sheet from '../components/Sheet.svelte';
   import { deleteGrowth, saveGrowth } from '../lib/actions.ts';
   import { db, type Growth } from '../lib/db.ts';
-  import { rise } from '../lib/motion.ts';
-  import { close } from '../lib/nav.svelte.ts';
   import { live } from '../lib/state.svelte.ts';
   import { fromDateInput, toDateInput } from '../lib/time.ts';
 
@@ -71,40 +69,32 @@
   }
 </script>
 
-<div class="overlay" transition:rise>
-  <div class="screen">
-    <header class="screen-header">
-      <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
-      <div class="screen-title">Growth</div>
-      <div style:width="44px"></div>
-    </header>
+<Overlay title="Growth">
+  {#each charts as chart (chart.title)}
+    {#if chart.points.length}
+      <section class="card chart">
+        <div class="serif chart-title">{chart.title} <span>({chart.unit})</span></div>
+        <LineChart points={chart.points} format={chart.format} />
+      </section>
+    {/if}
+  {/each}
 
-    {#each charts as chart (chart.title)}
-      {#if chart.points.length}
-        <section class="card chart">
-          <div class="serif chart-title">{chart.title} <span>({chart.unit})</span></div>
-          <LineChart points={chart.points} format={chart.format} />
-        </section>
-      {/if}
+  <button class="primary-dark" onclick={() => startEdit()}>Add measurement</button>
+
+  <section class="list">
+    {#each [...measurements].reverse() as g (g.Guid)}
+      <button class="card measurement" onclick={() => startEdit(g)}>
+        <span class="when">{new Date(g.MeasuredAt).toLocaleDateString([], { dateStyle: 'medium' })}</span>
+        <span class="values">
+          {[g.WeightKg != null ? pounds(g.WeightKg) : '', g.LengthCm != null ? inches(g.LengthCm) : '',
+            g.HeadCm != null ? `head ${inches(g.HeadCm)}` : ''].filter(Boolean).join(' · ')}
+        </span>
+      </button>
+    {:else}
+      <p class="empty">No measurements yet.</p>
     {/each}
-
-    <button class="primary-dark" onclick={() => startEdit()}>Add measurement</button>
-
-    <section class="list">
-      {#each [...measurements].reverse() as g (g.Guid)}
-        <button class="card measurement" onclick={() => startEdit(g)}>
-          <span class="when">{new Date(g.MeasuredAt).toLocaleDateString([], { dateStyle: 'medium' })}</span>
-          <span class="values">
-            {[g.WeightKg != null ? pounds(g.WeightKg) : '', g.LengthCm != null ? inches(g.LengthCm) : '',
-              g.HeadCm != null ? `head ${inches(g.HeadCm)}` : ''].filter(Boolean).join(' · ')}
-          </span>
-        </button>
-      {:else}
-        <p class="empty">No measurements yet.</p>
-      {/each}
-    </section>
-  </div>
-</div>
+  </section>
+</Overlay>
 
 {#if editing}
   <Sheet onclose={() => (editing = null)}>
@@ -126,14 +116,6 @@
 {/if}
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    overflow-y: auto;
-    background: var(--ground);
-  }
-
   .chart {
     padding: 16px;
     display: flex;
@@ -210,16 +192,5 @@
   .actions {
     display: flex;
     gap: 10px;
-  }
-
-  .delete {
-    height: 62px;
-    padding: 0 22px;
-    border-radius: 22px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--terra-text);
-    font-size: 16px;
-    font-weight: 800;
   }
 </style>

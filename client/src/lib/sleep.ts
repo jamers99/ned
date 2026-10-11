@@ -24,13 +24,13 @@ export function isNightTime(ms: number): boolean {
 
 const isSleep = (e: BabyEvent) => e.Type === 'Sleep' && !e.Deleted;
 const isNap = (e: BabyEvent) => isSleep(e) && !e.IsNight;
-const byStart = (a: BabyEvent, b: BabyEvent) => a.Start - b.Start;
+export const byStart = (a: BabyEvent, b: BabyEvent) => a.Start - b.Start;
 
 export function latestRunning(events: BabyEvent[], type: BabyEvent['Type']): BabyEvent | undefined {
   return events.filter(e => e.Type === type && !e.Deleted && e.End == null).sort(byStart).at(-1);
 }
 
-export function lastCompletedSleep(events: BabyEvent[]): BabyEvent | undefined {
+function lastCompletedSleep(events: BabyEvent[]): BabyEvent | undefined {
   return events.filter(e => isSleep(e) && e.End != null).sort((a, b) => a.End! - b.End!).at(-1);
 }
 

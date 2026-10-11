@@ -133,6 +133,49 @@ button:disabled {
   font-weight: 800;
 }
 
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A pair of start and end times; tapping one opens the phone's time wheel. */
+.times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.times .time {
+  height: 66px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--ground);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+  gap: 2px;
+}
+
+.time-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.time-value {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+}
+
 .round-button {
   width: 44px;
   height: 44px;
@@ -156,6 +199,17 @@ button:disabled {
   font-size: 20px;
   font-weight: 600;
   width: 100%;
+}
+
+.delete {
+  height: 62px;
+  padding: 0 22px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--terra-text);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .card {
@@ -183,12 +237,4 @@ button:disabled {
   font-family: var(--serif);
   font-size: 22px;
   font-weight: 600;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }

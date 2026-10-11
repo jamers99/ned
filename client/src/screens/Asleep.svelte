@@ -2,7 +2,8 @@
   import Icon from '../components/Icon.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { updateEvent } from '../lib/actions.ts';
-  import type { BabyEvent, SleepLocation, SleepOnset } from '../lib/db.ts';
+  import type { BabyEvent, SleepLocation } from '../lib/db.ts';
+  import { locationText, onsetChoices } from '../lib/describe.ts';
   import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { napNumber, timeAsleep, typicalNapRange, wakingsDuring } from '../lib/sleep.ts';
@@ -16,8 +17,7 @@
   const title = $derived(sleep.IsNight ? 'Night' : `Nap ${napNumber(sleep, events)}`);
   const typical = $derived(sleep.IsNight ? null : typicalNapRange(events, now));
 
-  const places: [SleepLocation, string][] = [['Crib', 'Crib'], ['Contact', 'Contact'], ['OnTheGo', 'On the go']];
-  const onsets: [SleepOnset, string][] = [['Own', 'On her own'], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
+  const places = Object.entries(locationText) as [SleepLocation, string][];
 
   function toggle(changes: Partial<BabyEvent>) {
     void updateEvent(sleep.Guid, changes);
@@ -73,7 +73,7 @@
     <div class="group">
       <span class="label">Fell asleep</span>
       <div class="chips">
-        {#each onsets as [value, text] (value)}
+        {#each onsetChoices as [value, text] (value)}
           <button class="chip" class:on={sleep.SleepOnset === value}
             onclick={() => toggle({ SleepOnset: sleep.SleepOnset === value ? null : value })}>{text}</button>
         {/each}
@@ -160,24 +160,12 @@
     padding: 18px;
   }
 
-  .group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
   .label {
     font-size: 12px;
     font-weight: 800;
     color: var(--moss-mist);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-  }
-
-  .chips {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
   }
 
   .chip {

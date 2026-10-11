@@ -3,7 +3,8 @@
   import { addSolids } from '../lib/actions.ts';
   import { db, type Food, type FoodCategory, type SolidAmount } from '../lib/db.ts';
   import { foodPresets, presetCategory } from '../lib/foods.ts';
-  import { pop, rise } from '../lib/motion.ts';
+  import Overlay from '../components/Overlay.svelte';
+  import { pop } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
   import { clock as clockTime } from '../lib/time.ts';
@@ -58,83 +59,65 @@
   </button>
 {/snippet}
 
-<div class="overlay" transition:rise>
-  <div class="screen">
-    <header class="screen-header">
-      <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
-      <div class="screen-title">Solids</div>
-      <div class="now">{clockTime(clock.now).replace(/\s?([AP])M$/i, (_, m) => m.toLowerCase())}</div>
-    </header>
+<Overlay title="Solids">
+  {#snippet aside()}
+    <span class="now">{clockTime(clock.now).replace(/\s?([AP])M$/i, (_, m) => m.toLowerCase())}</span>
+  {/snippet}
 
-    <label class="search">
-      <Icon name="search" size={18} stroke="var(--muted)" width={2} />
-      <input placeholder="Find or add a food" aria-label="Find or add a food" bind:value={query}
-        enterkeyhint="done" onkeydown={e => e.key === 'Enter' && canAdd && addTyped()} />
-    </label>
+  <label class="search">
+    <Icon name="search" size={18} stroke="var(--muted)" width={2} />
+    <input placeholder="Find or add a food" aria-label="Find or add a food" bind:value={query}
+      enterkeyhint="done" onkeydown={e => e.key === 'Enter' && canAdd && addTyped()} />
+  </label>
 
-    {#if query.trim()}
-      <div class="chips">
-        {#each matches as name (name)}{@render chip(name)}{/each}
-        {#if canAdd}
-          <button class="chip add" onclick={addTyped}><Icon name="plus" size={14} width={2.4} />Add “{query.trim()}”</button>
-        {/if}
-      </div>
-    {:else}
-      {#if recents.length}
-        <section class="group">
-          <div class="eyebrow">Recent</div>
-          <div class="chips">{#each recents as name (name)}{@render chip(name)}{/each}</div>
-        </section>
+  {#if query.trim()}
+    <div class="chips">
+      {#each matches as name (name)}{@render chip(name)}{/each}
+      {#if canAdd}
+        <button class="chip add" onclick={addTyped}><Icon name="plus" size={14} width={2.4} />Add “{query.trim()}”</button>
       {/if}
-
+    </div>
+  {:else}
+    {#if recents.length}
       <section class="group">
-        <div class="tabs">
-          {#each tabs as name (name)}
-            <button class:on={tab === name} onclick={() => (tab = name)}>{name}</button>
-          {/each}
-        </div>
-        <div class="chips presets">{#each tabNames as name (name)}{@render chip(name)}{/each}</div>
-      </section>
-    {/if}
-
-    {#if selected.length}
-      <section class="group">
-        <div class="eyebrow">Chosen</div>
-        <div class="chips">{#each selected as name (name)}<span class="chosen" in:pop>{@render chip(name)}</span>{/each}</div>
+        <div class="eyebrow">Recent</div>
+        <div class="chips">{#each recents as name (name)}{@render chip(name)}{/each}</div>
       </section>
     {/if}
 
     <section class="group">
-      <div class="eyebrow">How much · optional</div>
-      <div class="amounts">
-        {#each amounts as [value, text] (value)}
-          <button class:on={amount === value} onclick={() => (amount = amount === value ? null : value)}>{text}</button>
+      <div class="tabs">
+        {#each tabs as name (name)}
+          <button class:on={tab === name} onclick={() => (tab = name)}>{name}</button>
         {/each}
       </div>
+      <div class="chips presets">{#each tabNames as name (name)}{@render chip(name)}{/each}</div>
     </section>
+  {/if}
 
-    <button class="primary-dark save" disabled={selected.length === 0} onclick={save}>
-      {selected.length ? `Save · ${selected.length} ${selected.length === 1 ? 'food' : 'foods'}` : 'Save'}
-    </button>
-  </div>
-</div>
+  {#if selected.length}
+    <section class="group">
+      <div class="eyebrow">Chosen</div>
+      <div class="chips">{#each selected as name (name)}<span class="chosen" in:pop>{@render chip(name)}</span>{/each}</div>
+    </section>
+  {/if}
+
+  <section class="group">
+    <div class="eyebrow">How much · optional</div>
+    <div class="amounts">
+      {#each amounts as [value, text] (value)}
+        <button class:on={amount === value} onclick={() => (amount = amount === value ? null : value)}>{text}</button>
+      {/each}
+    </div>
+  </section>
+
+  <button class="primary-dark save" disabled={selected.length === 0} onclick={save}>
+    {selected.length ? `Save · ${selected.length} ${selected.length === 1 ? 'food' : 'foods'}` : 'Save'}
+  </button>
+</Overlay>
 
 <style>
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    overflow-y: auto;
-    background: var(--ground);
-  }
-
-  .screen {
-    gap: 16px;
-  }
-
   .now {
-    width: 44px;
-    text-align: right;
     font-size: 14px;
     font-weight: 700;
     color: var(--muted);
@@ -163,18 +146,6 @@
 
   .search input::placeholder {
     color: #8A7C6B;
-  }
-
-  .group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
   }
 
   .chosen {

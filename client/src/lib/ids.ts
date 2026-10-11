@@ -4,10 +4,6 @@ export const settingsGuid = '5e771465-0000-4000-8000-000000000001';
 
 const foodNamespace = '3f6b2c1e-8d4a-4f0b-9c7e-1a2b3c4d5e6f';
 
-export function newGuid(): string {
-  return crypto.randomUUID();
-}
-
 /** Both phones derive the same Guid for "Mango" and "mango", so offline adds upsert one row. */
 export function foodGuid(name: string): Promise<string> {
   return uuidV5(name.trim().toLowerCase(), foodNamespace);

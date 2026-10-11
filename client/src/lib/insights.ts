@@ -1,8 +1,7 @@
 import type { BabyEvent, SettledBy } from './db.ts';
-import { dayOf, wakingsDuring } from './sleep.ts';
+import { byStart, dayOf, wakingsDuring } from './sleep.ts';
 import { atMinuteOfDay, day, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
-const byStart = (a: BabyEvent, b: BabyEvent) => a.Start - b.Start;
 const loggedNights = (events: BabyEvent[]) =>
   events.filter(e => e.Type === 'Sleep' && e.IsNight && !e.Deleted && e.End != null).sort(byStart);
 

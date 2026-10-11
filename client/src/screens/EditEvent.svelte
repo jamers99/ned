@@ -4,7 +4,7 @@
   import { deleteEvent, updateEvent } from '../lib/actions.ts';
   import { db, type BabyEvent, type SettledBy, type Side, type SleepLocation, type SleepOnset, type SolidAmount,
     type WakeMood } from '../lib/db.ts';
-  import { amountText, locationText } from '../lib/describe.ts';
+  import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { live } from '../lib/state.svelte.ts';
   import { clock as clockTime, day, duration, mediumDate } from '../lib/time.ts';
@@ -17,8 +17,6 @@
   const titles: Record<BabyEvent['Type'], string> = {
     Sleep: 'Sleep', NightWaking: 'Night waking', Feed: 'Feed', Solids: 'Solids', Note: 'Note'
   };
-  const onsets: [SleepOnset, string][] = [['Own', 'On her own'], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
-  const settleOptions: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', 'On her own']];
   const moods: WakeMood[] = ['Happy', 'Fussy', 'Crying'];
   const sides: Side[] = ['Left', 'Right'];
 
@@ -77,12 +75,12 @@
     <div class="times">
       <TimeInput class="time" value={e.Start} onchange={setStart} label="Start time">
         <span class="time-label">{e.Type === 'Sleep' ? 'Fell asleep' : 'Started'}</span>
-        <span class="time-value serif">{clockTime(e.Start)}</span>
+        <span class="time-value">{clockTime(e.Start)}</span>
       </TimeInput>
       {#if (e.Type === 'Sleep' || e.Type === 'NightWaking') && e.End != null}
         <TimeInput class="time" value={e.End} onchange={setEnd} label="End time">
           <span class="time-label">{e.Type === 'Sleep' ? 'Woke' : 'Back asleep'}</span>
-          <span class="time-value serif">{clockTime(e.End)}</span>
+          <span class="time-value">{clockTime(e.End)}</span>
         </TimeInput>
       {/if}
     </div>
@@ -92,10 +90,10 @@
         v => v && set({ IsNight: v === 'night' }))}
       {@render choices('Where', Object.entries(locationText), e.SleepLocation,
         v => set({ SleepLocation: v as SleepLocation | null }))}
-      {@render choices('Fell asleep', onsets, e.SleepOnset, v => set({ SleepOnset: v as SleepOnset | null }))}
+      {@render choices('Fell asleep', onsetChoices, e.SleepOnset, v => set({ SleepOnset: v as SleepOnset | null }))}
       {@render choices('Woke up', moods.map(m => [m, m]), e.WakeMood, v => set({ WakeMood: v as WakeMood | null }))}
     {:else if e.Type === 'NightWaking'}
-      {@render choices('Back to sleep by', settleOptions, e.SettledBy, v => set({ SettledBy: v as SettledBy | null }))}
+      {@render choices('Back to sleep by', settleChoices, e.SettledBy, v => set({ SettledBy: v as SettledBy | null }))}
     {:else if e.Type === 'Feed' && e.FeedKind === 'Bottle'}
       {@render stepper('Amount', `${e.BottleOz ?? 0} oz`, d => set({ BottleOz: Math.max(0, (e.BottleOz ?? 0) + d / 2) }))}
     {:else if e.Type === 'Feed'}
@@ -141,47 +139,6 @@
     color: var(--muted);
   }
 
-  .times {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .times :global(.time) {
-    height: 66px;
-    border-radius: 18px;
-    border: 1px solid var(--line);
-    background: var(--ground);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 16px;
-    gap: 2px;
-  }
-
-  .time-label {
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--muted);
-  }
-
-  .time-value {
-    font-size: 22px;
-    font-weight: 600;
-  }
-
-  .group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
   .stepper {
     display: flex;
     align-items: center;
@@ -215,16 +172,5 @@
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 10px;
-  }
-
-  .delete {
-    height: 62px;
-    padding: 0 22px;
-    border-radius: 22px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--terra-text);
-    font-size: 16px;
-    font-weight: 800;
   }
 </style>
