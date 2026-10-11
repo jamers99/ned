@@ -80,7 +80,8 @@ button {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  transition: transform var(--quick);
+  transition: transform var(--quick), background-color var(--quick), color var(--quick),
+    border-color var(--quick), box-shadow var(--quick);
 }
 
 button:active {
@@ -89,6 +90,14 @@ button:active {
 
 button:disabled {
   opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+  }
 }
 
 .serif {

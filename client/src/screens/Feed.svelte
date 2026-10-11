@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
   import Icon from '../components/Icon.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { addEvent, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
+  import { rise } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { latestRunning } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -80,7 +80,7 @@
   }
 </script>
 
-<div class="overlay" transition:fly={{ y: 40, duration: 160 }}>
+<div class="overlay" transition:rise>
   <div class="screen">
     <header class="screen-header">
       <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
@@ -89,6 +89,7 @@
     </header>
 
     <div class="segments" role="tablist">
+      <span class="thumb" class:second={kind === 'Bottle'}></span>
       {#each ['Nursing', 'Bottle'] as option (option)}
         <button role="tab" aria-selected={kind === option} class:on={kind === option} disabled={!!feed && option === 'Bottle'}
           onclick={() => choose(option as FeedKind)}>{option}</button>
@@ -162,6 +163,7 @@
   }
 
   .segments {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
@@ -180,11 +182,29 @@
     font-weight: 700;
   }
 
+  .segments button {
+    position: relative;
+  }
+
   .segments button.on {
-    background: var(--surface);
     color: var(--ink);
     font-weight: 800;
+  }
+
+  .thumb {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 6px);
+    border-radius: 12px;
+    background: var(--surface);
     box-shadow: 0 1px 2px rgba(58, 47, 37, 0.08);
+    transition: transform var(--quick);
+  }
+
+  .thumb.second {
+    transform: translateX(calc(100% + 4px));
   }
 
   .total {

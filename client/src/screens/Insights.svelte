@@ -3,6 +3,7 @@
   import { db, type BabyEvent } from '../lib/db.ts';
   import { settledText } from '../lib/describe.ts';
   import { bedtimeStats, bestLastWakeWindow, nightsNeededForPattern, stretchByMonth, wakingStats } from '../lib/insights.ts';
+  import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
   import { clock as clockTime, duration } from '../lib/time.ts';
@@ -17,7 +18,7 @@
   const pattern = $derived(bestLastWakeWindow(events));
 </script>
 
-<div class="screen">
+<div class="screen" in:appear|global>
   <h1 class="serif">Insights</h1>
 
   <section class="card chart">

@@ -1,14 +1,14 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { appear, slideUp } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
 
   let { children, onclose = close }: { children: Snippet; onclose?: () => void } = $props();
 </script>
 
-<div class="scrim" transition:fade={{ duration: 160 }}>
+<div class="scrim" transition:appear>
   <button class="dismiss" aria-label="Close" onclick={onclose}></button>
-  <div class="sheet" role="dialog" aria-modal="true" transition:fly={{ y: 80, duration: 160 }}>
+  <div class="sheet" role="dialog" aria-modal="true" transition:slideUp>
     <div class="handle"></div>
     {@render children()}
   </div>

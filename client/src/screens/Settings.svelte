@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
   import Icon from '../components/Icon.svelte';
   import { updateSettings } from '../lib/actions.ts';
   import { signOut } from '../lib/auth.ts';
   import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
   import { settingsGuid } from '../lib/ids.ts';
+  import { rise } from '../lib/motion.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { defaultTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
@@ -45,7 +45,7 @@
   }
 </script>
 
-<div class="overlay" transition:fly={{ y: 40, duration: 160 }}>
+<div class="overlay" transition:rise>
   <div class="screen">
     <header class="screen-header">
       <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>

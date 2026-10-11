@@ -3,6 +3,7 @@
   import TimeInput from '../components/TimeInput.svelte';
   import { updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SleepLocation, SleepOnset } from '../lib/db.ts';
+  import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { napNumber, timeAsleep, typicalNapRange, wakingsDuring } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -32,7 +33,7 @@
   }
 </script>
 
-<div class="screen asleep">
+<div class="screen asleep" in:appear|global>
   <header class="screen-header">
     <div>
       <div class="date">{longDate(now)}</div>

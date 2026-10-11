@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
+  import { appear } from '../lib/motion.ts';
   import { addEvent, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy } from '../lib/db.ts';
   import { close, open } from '../lib/nav.svelte.ts';
@@ -29,7 +29,7 @@
   }
 </script>
 
-<div class="night" transition:fade={{ duration: 160 }}>
+<div class="night" transition:appear>
   <header>
     <div class="dim">Night · {clockTime(now)}</div>
     <button class="exit" onclick={close}>Exit</button>

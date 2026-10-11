@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
   import Icon from '../components/Icon.svelte';
   import LineChart from '../components/LineChart.svelte';
   import Sheet from '../components/Sheet.svelte';
   import { deleteGrowth, saveGrowth } from '../lib/actions.ts';
   import { db, type Growth } from '../lib/db.ts';
+  import { rise } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { live } from '../lib/state.svelte.ts';
   import { fromDateInput, toDateInput } from '../lib/time.ts';
@@ -71,7 +71,7 @@
   }
 </script>
 
-<div class="overlay" transition:fly={{ y: 40, duration: 160 }}>
+<div class="overlay" transition:rise>
   <div class="screen">
     <header class="screen-header">
       <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>

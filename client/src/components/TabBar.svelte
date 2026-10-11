@@ -40,6 +40,7 @@
     padding: 6px 0 calc(var(--safe-bottom) + 10px);
     border-top: 1px solid var(--line);
     background: var(--ground);
+    transition: background-color var(--quick), border-color var(--quick);
   }
 
   button {

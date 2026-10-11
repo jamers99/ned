@@ -99,6 +99,10 @@
     padding-bottom: calc(var(--safe-bottom) + 72px);
   }
 
+  main {
+    transition: background-color var(--quick);
+  }
+
   main.dark {
     background: var(--moss-deep);
   }

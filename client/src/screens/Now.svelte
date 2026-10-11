@@ -3,6 +3,7 @@
   import TodayStrip from '../components/TodayStrip.svelte';
   import { startSleep } from '../lib/actions.ts';
   import type { BabyEvent } from '../lib/db.ts';
+  import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { isNightTime, latestRunning, nextSleep, type SleepTargets } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -26,7 +27,7 @@
 {#if sleeping}
   <Asleep sleep={sleeping} {events} />
 {:else}
-  <div class="screen">
+  <div class="screen" in:appear|global>
     <header class="screen-header">
       <div>
         <div class="date">{longDate(now)}</div>
@@ -49,7 +50,7 @@
       {#if next}
         <div class="big serif">{duration(awakeFor)}</div>
         <div class="bar" aria-hidden="true">
-          <div class="fill" style:width="{Math.min(100, (awakeFor / barSpan) * 100)}%"></div>
+          <div class="fill" style:transform="translateX({Math.min(100, (awakeFor / barSpan) * 100) - 100}%)"></div>
           <div class="target" style:left="{((next.from - next.awakeSince) / barSpan) * 100}%"
             style:width="{((next.to - next.from) / barSpan) * 100}%"></div>
         </div>
@@ -148,11 +149,13 @@
     overflow: hidden;
   }
 
+  /* Full width and slid into place, so it glides between the clock's one-second ticks. */
   .fill {
     position: absolute;
-    inset: 0 auto 0 0;
+    inset: 0;
     border-radius: 5px;
     background: var(--terra);
+    transition: transform 1s linear;
   }
 
   .target {

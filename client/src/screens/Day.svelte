@@ -2,88 +2,105 @@
   import Icon from '../components/Icon.svelte';
   import { db, type BabyEvent } from '../lib/db.ts';
   import { describe, sleepMeta } from '../lib/describe.ts';
+  import { appear, slide } from '../lib/motion.ts';
   import { nav, open } from '../lib/nav.svelte.ts';
   import { dayTimeline } from '../lib/sleep.ts';
   import { clock, live } from '../lib/state.svelte.ts';
   import { addDays, clock as clockTime, clockRange, duration, mediumDate, startOfDay } from '../lib/time.ts';
 
   // A day's rows include the night that ended that morning, so read from the evening before.
-  const nearby = live(
-    (dayStart: number) => db.events.where('Start').between(addDays(dayStart, -1), addDays(dayStart, 1)).toArray(),
-    [] as BabyEvent[],
+  // The result carries its day, so the rows slide in only once that day's data is ready.
+  const loaded = live(
+    async (dayStart: number) => ({
+      day: dayStart,
+      events: await db.events.where('Start').between(addDays(dayStart, -1), addDays(dayStart, 1)).toArray()
+    }),
+    { day: nav.day, events: [] as BabyEvent[] },
     () => nav.day
   );
 
   const now = $derived(clock.now);
   const isToday = $derived(nav.day === startOfDay(now));
-  const timeline = $derived(dayTimeline(nearby.value, nav.day, now));
+  const timeline = $derived(dayTimeline(loaded.value.events, loaded.value.day, now));
+  let direction = $state(0);
 
-  function step(days: number) {
-    nav.day = addDays(nav.day, days);
+  function show(day: number) {
+    direction = day - nav.day;
+    nav.day = day;
   }
 </script>
 
-<div class="screen">
+<div class="screen" in:appear|global>
   <header class="screen-header">
-    <button class="round-button" aria-label="Previous day" onclick={() => step(-1)}>
+    <button class="round-button" aria-label="Previous day" onclick={() => show(addDays(nav.day, -1))}>
       <Icon name="left" size={18} width={2} />
     </button>
-    <button class="title serif" onclick={() => (nav.day = startOfDay(Date.now()))}>
+    <button class="title serif" onclick={() => show(startOfDay(Date.now()))}>
       {isToday ? 'Today' : mediumDate(nav.day)}
     </button>
-    <button class="round-button" aria-label="Next day" disabled={isToday} onclick={() => step(1)}>
+    <button class="round-button" aria-label="Next day" disabled={isToday} onclick={() => show(addDays(nav.day, 1))}>
       <Icon name="right" size={18} width={2} />
     </button>
   </header>
 
-  <div class="totals">
-    <div class="total">
-      <span>Sleep</span>
-      <strong class="serif">{duration(timeline.sleepTotal)}</strong>
-    </div>
-    <div class="total">
-      <span>Naps</span>
-      <strong class="serif">{timeline.napCount} · {duration(timeline.napTotal)}</strong>
-    </div>
-    <div class="total">
-      <span>Feeds</span>
-      <strong class="serif">{timeline.feedCount} · {duration(timeline.nursingTotal)}</strong>
-    </div>
-  </div>
+  {#key loaded.value.day}
+    <div class="day" in:slide={{ direction }}>
+      <div class="totals">
+        <div class="total">
+          <span>Sleep</span>
+          <strong class="serif">{duration(timeline.sleepTotal)}</strong>
+        </div>
+        <div class="total">
+          <span>Naps</span>
+          <strong class="serif">{timeline.napCount} · {duration(timeline.napTotal)}</strong>
+        </div>
+        <div class="total">
+          <span>Feeds</span>
+          <strong class="serif">{timeline.feedCount} · {duration(timeline.nursingTotal)}</strong>
+        </div>
+      </div>
 
-  <div class="rows">
-    {#each timeline.rows as row, i (row.kind === 'window' ? `window-${i}` : row.event.Guid)}
-      {#if row.kind === 'sleep'}
-        <button class="sleep" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
-          <span class="left">
-            <span class="serif sleep-label">{row.label}</span>
-            <span class="sleep-meta">
-              {row.event.End ? clockRange(row.event.Start, row.event.End) : `Since ${clockTime(row.event.Start)}`}
-              {#if sleepMeta(row.event, row.wakings)} · {sleepMeta(row.event, row.wakings)}{/if}
-            </span>
-          </span>
-          <span class="serif sleep-duration">{duration(row.asleep)}</span>
-        </button>
-      {:else if row.kind === 'window'}
-        <div class="window"><span class="line"></span>{row.label}</div>
-      {:else}
-        {@const text = describe(row.event, now)}
-        <button class="event" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
-          <span class="left">
-            <span class="event-label">{text.label}</span>
-            {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
-          </span>
-          <span class="event-time">{text.time}</span>
-        </button>
-      {/if}
-    {:else}
-      <p class="empty">Nothing logged {isToday ? 'yet today' : 'this day'}.</p>
-    {/each}
-  </div>
+      <div class="rows">
+        {#each timeline.rows as row, i (row.kind === 'window' ? `window-${i}` : row.event.Guid)}
+          {#if row.kind === 'sleep'}
+            <button class="sleep" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
+              <span class="left">
+                <span class="serif sleep-label">{row.label}</span>
+                <span class="sleep-meta">
+                  {row.event.End ? clockRange(row.event.Start, row.event.End) : `Since ${clockTime(row.event.Start)}`}
+                  {#if sleepMeta(row.event, row.wakings)} · {sleepMeta(row.event, row.wakings)}{/if}
+                </span>
+              </span>
+              <span class="serif sleep-duration">{duration(row.asleep)}</span>
+            </button>
+          {:else if row.kind === 'window'}
+            <div class="window"><span class="line"></span>{row.label}</div>
+          {:else}
+            {@const text = describe(row.event, now)}
+            <button class="event" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
+              <span class="left">
+                <span class="event-label">{text.label}</span>
+                {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
+              </span>
+              <span class="event-time">{text.time}</span>
+            </button>
+          {/if}
+        {:else}
+          <p class="empty">Nothing logged {isToday ? 'yet today' : 'this day'}.</p>
+        {/each}
+      </div>
+    </div>
+  {/key}
 </div>
 
 <style>
   .screen {
+    gap: 14px;
+  }
+
+  .day {
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
 
