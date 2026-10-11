@@ -14,16 +14,17 @@ export const status = $state({
   error: ''
 });
 
-// Bumped when the app returns to the foreground, so every live query starts over with a fresh read.
-let resumed = $state(0);
+// Live queries only run while this copy of the app is on screen; coming back to the front starts them over.
+let onScreen = $state(true);
 
 export function startClock() {
-  const tick = () => (clock.now = Date.now());
-  setInterval(tick, 1000);
-  document.addEventListener('visibilitychange', () => {
-    tick();
-    if (document.visibilityState === 'visible') resumed++;
-  });
+  const update = () => {
+    clock.now = Date.now();
+    onScreen = document.visibilityState === 'visible';
+  };
+  update();
+  setInterval(update, 1000);
+  document.addEventListener('visibilitychange', update);
 }
 
 export function reportProblem(error: unknown) {
@@ -42,7 +43,9 @@ export function watchForProblems() {
 export function live<T, D = undefined>(query: (deps: D) => Promise<T>, initial: T, deps?: () => D) {
   let value = $state.raw(initial);
   $effect(() => {
-    void resumed;
+    // A hidden copy (a background browser tab, say) that Android freezes mid-read holds up every save in the
+    // copy on screen, and every read after it. So hidden copies don't read; they keep their last value.
+    if (!onScreen) return;
     const current = deps?.() as D;
     const ticket = startWaiting();
     const subscription = liveQuery(() => query(current)).subscribe({

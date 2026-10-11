@@ -61,7 +61,11 @@ async function pushThenPull() {
       : error instanceof Error ? error.message : String(error);
     if (error instanceof SignInRequired) return;
     failures++;
-    scheduleSync(Math.min(maxBackoff, 1000 * 2 ** failures));
+    // Retry with backoff, but not from the background: coming back to the front syncs anyway.
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (globalThis.document?.visibilityState !== 'hidden') void syncNow();
+    }, Math.min(maxBackoff, 1000 * 2 ** failures));
   } finally {
     clearTimeout(timeout);
     status.syncing = false;

@@ -26,16 +26,19 @@ listenForBack();
 await loadUser();
 mount(App, { target: document.getElementById('app')! });
 
-// Push and pull on open, whenever the app comes back to the front, when the network returns,
-// and every minute while it is open.
-void syncNow();
+// Push and pull on open, whenever the app comes back to the front, when the network returns, and every minute
+// while it is open — but only in the copy on screen. A hidden copy frozen mid-save would hold up the database.
+const onScreen = () => document.visibilityState === 'visible';
+if (onScreen()) void syncNow();
 // Back from the background: whatever sync was in flight may be hanging on a dead connection, so start over.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (!onScreen()) return;
   abandonSync();
   void syncNow();
 });
-addEventListener('online', () => void syncNow());
+addEventListener('online', () => {
+  if (onScreen()) void syncNow();
+});
 setInterval(() => {
-  if (document.visibilityState === 'visible') void syncNow();
+  if (onScreen()) void syncNow();
 }, 60_000);
