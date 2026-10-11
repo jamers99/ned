@@ -1,5 +1,5 @@
 import type { BabyEvent, Settings } from './db.ts';
-import { atMinuteOfDay, day, duration, hour, minute, minuteOfDay, startOfDay } from './time.ts';
+import { addDays, atMinuteOfDay, day, duration, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
 export type SleepTargets = Pick<Settings, 'NapsPerDay' | 'Nap1WakeWindowMinutes' | 'Nap2WakeWindowMinutes'
   | 'BedtimeWakeWindowMinutes' | 'BedtimeEarliestMinutes' | 'BedtimeLatestMinutes'>;
@@ -179,6 +179,11 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
     timeline.rows.push({ kind: 'event', event });
     if (event.Type === 'NightWaking') windowSlot = timeline.rows.length;
   }
+
+  // Tonight's sleep belongs to tomorrow, but the wake window leading into it belongs to today.
+  const bedtime = events.find(e => isSleep(e) && e.IsNight && dayOf(e) === addDays(dayStart, 1));
+  if (previousSleepEnd != null && bedtime && bedtime.Start > previousSleepEnd)
+    timeline.rows.splice(windowSlot, 0, { kind: 'window', label: `Awake ${duration(bedtime.Start - previousSleepEnd)} until bedtime` });
 
   return timeline;
 }
