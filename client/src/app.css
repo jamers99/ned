@@ -1,0 +1,182 @@
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-opsz-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'Nunito Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url('@fontsource-variable/nunito-sans/files/nunito-sans-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+:root {
+  --ground: #F4EEE3;
+  --surface: #FCF9F3;
+  --line: #E3D8C6;
+  --ink: #3A2F25;
+  --muted: #6E6152;
+  --moss: #56654A;
+  --moss-deep: #3E4A35;
+  --moss-soft: #E4E7D7;
+  --moss-pale: #B9C3A8;
+  --moss-mist: #D3DAC5;
+  --terra: #B0583A;
+  --terra-text: #93452B;
+  --peach: #F6D9C3;
+  --track: #EDE4D5;
+  --night-bg: #0B0807;
+  --night-text: #E9A48C;
+  --night-dim: #B9785F;
+  --night-button: #1C1310;
+  --night-line: #3A2620;
+
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Nunito Sans', system-ui, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --quick: 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--quick);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.serif {
+  font-family: var(--serif);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Chips: fully round, ≥44px tall touch area. */
+.chip {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip.on {
+  border-color: transparent;
+  background: var(--terra);
+  color: var(--surface);
+  font-weight: 800;
+}
+
+.round-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex: none;
+}
+
+.primary-dark {
+  height: 62px;
+  border-radius: 22px;
+  border: 0;
+  background: var(--ink);
+  color: var(--surface);
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+
+.screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bottom) + 24px);
+}
+
+.screen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+
+.screen-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
