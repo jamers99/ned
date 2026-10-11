@@ -4,10 +4,11 @@ import './app.css';
 import App from './App.svelte';
 import { loadUser } from './lib/auth.ts';
 import { listenForBack } from './lib/nav.svelte.ts';
-import { startClock } from './lib/state.svelte.ts';
+import { startClock, watchForProblems } from './lib/state.svelte.ts';
 import { syncNow } from './lib/sync.ts';
 
 registerSW({ immediate: true });
+watchForProblems();
 startClock();
 listenForBack();
 

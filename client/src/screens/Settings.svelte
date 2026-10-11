@@ -89,6 +89,12 @@
         </tbody>
       </table>
       <button class="chip" onclick={() => syncNow()}>Sync now</button>
+      {#if status.problems.length}
+        <div class="eyebrow">Recent problems</div>
+        {#each status.problems as problem (problem.at + problem.message)}
+          <div class="error">{clockTime(problem.at)} · {problem.message}</div>
+        {/each}
+      {/if}
     </section>
 
     <section class="card list">

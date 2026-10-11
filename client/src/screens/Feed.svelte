@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, updateEvent } from '../lib/actions.ts';
+  import { addEvent, startRunning, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
   import { rise } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
@@ -46,7 +46,7 @@
     const at = Date.now();
     lastTapped = side;
     if (!feed) {
-      void addEvent({ Type: 'Feed', FeedKind: 'Nursing', Start: at, StartSide: side, ActiveSide: side, ActiveSince: at });
+      void startRunning({ Type: 'Feed', FeedKind: 'Nursing', Start: at, StartSide: side, ActiveSide: side, ActiveSince: at });
       return;
     }
     if (feed.ActiveSide === side)

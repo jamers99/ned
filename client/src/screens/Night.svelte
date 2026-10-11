@@ -1,6 +1,6 @@
 <script lang="ts">
   import { appear } from '../lib/motion.ts';
-  import { addEvent, updateEvent } from '../lib/actions.ts';
+  import { startRunning, startSleep, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy } from '../lib/db.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { latestRunning, timeAsleep, wakingsDuring } from '../lib/sleep.ts';
@@ -53,14 +53,14 @@
         {wakings.length === 0 ? 'No wakings yet' : `${wakings.length} ${wakings.length === 1 ? 'waking' : 'wakings'} so far`}
       </div>
     </section>
-    <button class="huge awake" onclick={() => addEvent({ Type: 'NightWaking', Start: Date.now() })}>
+    <button class="huge awake" onclick={() => startRunning({ Type: 'NightWaking', Start: Date.now() })}>
       She's awake
     </button>
   {:else}
     <section class="timer">
       <div class="dim">Not asleep</div>
     </section>
-    <button class="huge awake" onclick={() => addEvent({ Type: 'Sleep', Start: Date.now(), IsNight: true })}>
+    <button class="huge awake" onclick={() => startSleep(Date.now(), true)}>
       Start night
     </button>
   {/if}

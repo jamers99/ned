@@ -5,6 +5,7 @@ import { foodGuid, newGuid, settingsGuid } from './ids.ts';
 import { defaultTargets, isNightTime } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
+import { day } from './time.ts';
 
 let lastEdit = 0;
 
@@ -59,8 +60,27 @@ export async function deleteEvent(guid: string) {
   await updateEvent(guid, { Deleted: true });
 }
 
-export function startSleep(now = Date.now()) {
-  return addEvent({ Type: 'Sleep', Start: now, IsNight: isNightTime(now) });
+/**
+ * Starts a sleep, a night waking or a nursing feed, unless one of that kind is already running. A second tap
+ * (or a tap before the screen has caught up) returns the running one instead of starting another.
+ */
+export async function startRunning(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type'>): Promise<BabyEvent> {
+  const event = { ...newEvent(fields), dirty: editStamp() };
+  const running = await db.transaction('rw', db.events, async () => {
+    const existing = await db.events
+      .where('Start').above(event.Start - 2 * day)
+      .filter(e => e.Type === event.Type && e.FeedKind === event.FeedKind && e.End == null && !e.Deleted)
+      .first();
+    if (!existing) await db.events.add(event);
+    return existing;
+  });
+  if (running) return running;
+  scheduleSync();
+  return event;
+}
+
+export function startSleep(now = Date.now(), isNight = isNightTime(now)) {
+  return startRunning({ Type: 'Sleep', Start: now, IsNight: isNight });
 }
 
 /** Saves the chosen foods on a Solids event and bumps each food's recency, creating new foods. */
