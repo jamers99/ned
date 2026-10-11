@@ -12,8 +12,8 @@ A private, two-parent baby tracker built around one goal: help Kennedy (born 202
 
 ```
 /client   PWA — Vite + Svelte 5 + TypeScript, Dexie (IndexedDB), vite-plugin-pwa (Workbox)
-/server   Benevia Core API (.NET 10, PostgreSQL) — OData, entity events
-/tools    nara-import (one-time import of the Nara CSV export)
+/server   Benevia Core API (.NET 10, PostgreSQL) — OData, entity events. Builds the client into Kennedy.API/wwwroot
+/tools    nara-import (one-time import of the Nara CSV export; reuses client/src/lib modules)
 ```
 
 - Client is a static PWA served by any static host (or from the server). Installed via Safari/Chrome "Add to Home Screen". `display: standalone`, portrait.
@@ -21,7 +21,7 @@ A private, two-parent baby tracker built around one goal: help Kennedy (born 202
 
 ## Data model (server entities ⇄ Dexie tables, same shape)
 
-All records: `Id` (Guid, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in an entity event on every create/update), `IsDeleted` (bool), `LoggedBy` (string: "Natalie" | "James"). Store times as UTC instants; display in the device's local time zone.
+All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: "Natalie" | "James"; "Nara" for imported rows). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
 
 **Event** — one table for everything time-based
 | Field | Notes |
@@ -39,7 +39,7 @@ All records: `Id` (Guid, **generated on the phone**), `ModifiedAt` (DateTimeOffs
 | `StartSide` | `Left` \| `Right` — which side the feed started on |
 | `ActiveSide`, `ActiveSince` | Nursing timer state while running (so the timer survives app close and syncs) |
 | `BottleOz` | decimal |
-| `Foods` | Solids: string[] (JSON column) of food names |
+| `Foods` | Solids: string[] of food names on the phone; one name per line in a text column on the server |
 | `SolidAmount` | `Taste` \| `Some` \| `All` (nullable) |
 | `Text` | Note text, or free-form note on any event |
 
@@ -47,18 +47,18 @@ Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are
 
 **Growth** — `MeasuredAt`, `WeightKg`, `LengthCm`, `HeadCm` (each nullable). Display lb/oz and inches.
 
-**Food** — `Name` (unique, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`.
+**Food** — `Name` (unique, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`. The `Guid` is a UUIDv5 of the lower-cased name, so both phones adding "Mango" offline upsert the same row.
 
-**Settings** (local + synced single row) — wake-window targets per nap index (default for ~7 months: nap1 2h30m, nap2 2h45m, before bed 3h30m), bedtime target window.
+**Settings** (local + synced single row with a fixed `Guid`) — naps per day, wake-window targets per nap index (default for ~7 months: nap1 2h30m, nap2 2h45m, before bed 3h30m), bedtime target window (6:30–7:30 PM).
 
 ## Sync
 
 The client owns an outbox. Server is a dumb, reliable store.
 
 1. **Write path:** UI writes to Dexie and marks the row `dirty`. UI re-renders from Dexie (liveQuery). Done — the user never waits.
-2. **Push:** debounced 1s after any write, plus on app open / `visibilitychange` to visible / every 60s while open. Send all dirty rows as upserts in an OData `$batch` (client-supplied `Id`). Clear `dirty` on success; keep it on failure and retry with backoff.
-3. **Pull:** `GET /odata/Events?$filter=ModifiedAt ge {cursor}` (same for Growth, Food, Settings). Store `cursor` = max `ModifiedAt` received; use `ge` and de-dupe by `Id`+`ModifiedAt`.
-4. **Deletes are soft:** set `IsDeleted = true` and push. ⚠️ The app's global query filter hides `IsDeleted` rows — **the sync pull queries must bypass that filter**, or deletions will never reach the other phone.
+2. **Push:** debounced 1s after any write, plus on app open / `visibilitychange` to visible / every 60s while open. Send all dirty rows as upserts in one OData `$batch` (`POST /api/$batch`, JSON format): PATCH every row, then POST (with the phone's `Guid`) the ones that returned 404 — Core has no upsert. Clear `dirty` on success unless the row was edited again mid-push; keep it on failure and retry with backoff.
+3. **Pull:** `GET /api/Event?$select=<all fields>&$filter=ModifiedAt ge {cursor − 60s}` (same for Growth, Food, Settings; Core returns only `Guid` without `$select`). Store `cursor` = max `ModifiedAt` received; skip rows whose `ModifiedAt` matches the local copy. The 60s overlap catches saves that commit after a later-stamped one.
+4. **Deletes are soft:** set `Deleted = true` and push. ⚠️ There is deliberately **no** global query filter on `Deleted`, so the standard OData pull returns deleted rows and deletions reach the other phone. Don't add one; filter on the phone instead.
 5. **Conflicts:** last write (server `ModifiedAt`) wins. Two users, rarely editing the same row — keep it simple.
 6. A running timer is just a row with `End = null`, so the other phone sees it after the next sync.
 
@@ -70,8 +70,7 @@ Use Benevia Core's built-in login (access token + refresh token). This is NOT th
 - **Sign in once per phone:** a first-run screen with username + password. After that, the user should never see a login again unless they sign out or the refresh token is revoked.
 - **Access token:** keep it in memory only, never in localStorage or IndexedDB. It is fine to lose it when the app closes.
 - **Refresh token:**
-  - Preferred: if the framework can return it as an HttpOnly, Secure, SameSite=Strict cookie, use that. It requires the app and the API on the same origin, e.g. `baby.example.com` with the API under `/api` and the static PWA served by the same server.
-  - Otherwise: store it in IndexedDB, and keep a strict Content-Security-Policy with no third-party scripts.
+  - Core's login (`POST /api/auth/signin`, `POST /api/auth/refresh`) returns the refresh token in the JSON body and has no cookie option, so it is stored in IndexedDB, and the server sends a strict Content-Security-Policy with no third-party scripts. The app and API share one origin (the server serves the PWA).
   - Ask the server for a long refresh lifetime (about 90 days, extended on each use) so phones stay signed in.
 - **Sync flow:** before each push/pull, if there is no valid access token, refresh silently. If a request returns 401, refresh once and retry once.
 - **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
@@ -140,7 +139,7 @@ Input: `export_narababy_kennedy_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)`
 | Note column | `Text` | if present |
 | Diaper, Pump, Milestone, Profile | skip | |
 
-Expect roughly 2,019 breastfeeds, 36 bottles, 165 solids, 25 sleeps, 11 growth rows.
+Expect roughly 2,019 breastfeeds, 36 bottles, 165 solids, 25 sleeps, 11 growth rows. The duration, unit, food and growth column names were not confirmed against a real export; they are matched by pattern in `tools/nara-import/nara.ts`, so run `--dry-run` first and compare.
 
 ## Build order
 

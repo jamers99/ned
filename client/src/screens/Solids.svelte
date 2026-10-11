@@ -6,7 +6,7 @@
   import { foodPresets, presetCategory } from '../lib/foods.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
-  import { clockShort } from '../lib/time.ts';
+  import { clock as clockTime } from '../lib/time.ts';
 
   const known = live(() => db.foods.toArray(), [] as Food[]);
   const foods = $derived(known.value.filter(f => !f.Deleted).sort((a, b) => (b.LastUsedAt ?? 0) - (a.LastUsedAt ?? 0)));
@@ -63,7 +63,7 @@
     <header class="screen-header">
       <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
       <div class="screen-title">Solids</div>
-      <div class="now">{clockShort(clock.now)}</div>
+      <div class="now">{clockTime(clock.now).replace(/\s?([AP])M$/i, (_, m) => m.toLowerCase())}</div>
     </header>
 
     <label class="search">

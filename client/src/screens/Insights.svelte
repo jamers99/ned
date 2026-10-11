@@ -148,6 +148,7 @@
 
   .bar {
     width: 100%;
+    max-width: 36px;
     min-height: 4px;
     border-radius: 8px 8px 4px 4px;
     background: #C3CBB3;

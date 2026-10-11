@@ -10,6 +10,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Core creates the admin account on first start and falls back to a well-known password.
+if (!builder.Environment.IsDevelopment() && string.IsNullOrEmpty(builder.Configuration["Tenants:Kennedy:AdminPassword"]))
+    throw new InvalidOperationException("Set Tenants:Kennedy:AdminPassword before the first start.");
+
 builder.Services
     .AddCorePostgres()
     .AddCoreDataGeneration()

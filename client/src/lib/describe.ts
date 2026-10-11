@@ -2,7 +2,7 @@ import type { BabyEvent, SettledBy, SleepLocation, SleepOnset, SolidAmount } fro
 import { clock, duration } from './time.ts';
 
 export const locationText: Record<SleepLocation, string> = { Crib: 'Crib', Contact: 'Contact', OnTheGo: 'On the go' };
-export const onsetText: Record<SleepOnset, string> = { Own: 'on her own', Fed: 'fed', Rocked: 'rocked', Held: 'held' };
+export const onsetText: Record<SleepOnset, string> = { Own: 'on her own', Fed: 'fed to sleep', Rocked: 'rocked', Held: 'held' };
 export const settledText: Record<SettledBy, string> = { Feeding: 'feeding', Soothing: 'soothing', Own: 'on her own' };
 export const amountText: Record<SolidAmount, string> = { Taste: 'a taste', Some: 'some', All: 'all of it' };
 

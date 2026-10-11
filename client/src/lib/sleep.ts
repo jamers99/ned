@@ -142,9 +142,17 @@ export interface DayTimeline {
   nursingTotal: number;
 }
 
-/** Everything that belongs to one day, in order, with awake gaps between sleeps shown as wake windows. */
+/**
+ * Everything that belongs to one day, in order, with awake gaps between sleeps shown as wake windows.
+ * Anything logged during a night (a waking, a night feed) belongs to that night's morning.
+ */
 export function dayTimeline(events: BabyEvent[], dayStart: number, now: number): DayTimeline {
-  const own = events.filter(e => !e.Deleted && dayOf(e) === dayStart).sort(byStart);
+  const nights = events.filter(e => isSleep(e) && e.IsNight);
+  const dayFor = (e: BabyEvent) => {
+    const night = e.Type === 'Sleep' ? undefined : nights.find(n => e.Start >= n.Start && e.Start < (n.End ?? now));
+    return dayOf(night ?? e);
+  };
+  const own = events.filter(e => !e.Deleted && dayFor(e) === dayStart).sort(byStart);
   const timeline: DayTimeline = { rows: [], sleepTotal: 0, napCount: 0, napTotal: 0, feedCount: 0, nursingTotal: 0 };
   let previousSleepEnd: number | null = null;
   let windowSlot = 0;
@@ -177,7 +185,7 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       timeline.nursingTotal += (event.LeftSeconds + event.RightSeconds) * 1000;
     }
     timeline.rows.push({ kind: 'event', event });
-    if (event.Type === 'NightWaking') windowSlot = timeline.rows.length;
+    if (previousSleepEnd != null && event.Start < previousSleepEnd) windowSlot = timeline.rows.length;
   }
 
   // Tonight's sleep belongs to tomorrow, but the wake window leading into it belongs to today.

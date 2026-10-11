@@ -21,6 +21,7 @@ function event(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type' | 'Start'>): 
 // Thursday Oct 8: Wednesday night 7:05 PM – 6:40 AM with one waking, two naps, then bed at 7:05 PM.
 const night = event({ Type: 'Sleep', IsNight: true, Start: at(7, '19:05'), End: at(8, '06:40') });
 const waking = event({ Type: 'NightWaking', Start: at(8, '02:14'), End: at(8, '02:30'), SettledBy: 'Feeding' });
+const nightFeed = event({ Type: 'Feed', FeedKind: 'Nursing', Start: at(7, '22:40'), End: at(7, '22:50'), LeftSeconds: 600 });
 const morningFeed = event({ Type: 'Feed', FeedKind: 'Nursing', Start: at(8, '07:13'), End: at(8, '07:25'), LeftSeconds: 360, RightSeconds: 360 });
 const nap1 = event({ Type: 'Sleep', Start: at(8, '09:05'), End: at(8, '10:20') });
 const nap2 = event({ Type: 'Sleep', Start: at(8, '12:50'), End: at(8, '13:35') });
@@ -65,13 +66,14 @@ describe('time asleep', () => {
 
 describe('day timeline', () => {
   it('starts with the night that ended that morning and shows awake gaps between sleeps', () => {
-    const events = [night, waking, morningFeed, nap1, nap2, nextNight];
+    const events = [night, nightFeed, waking, morningFeed, nap1, nap2, nextNight];
     const timeline = dayTimeline(events, at(8, '00:00'), at(9, '12:00'));
 
     expect(timeline.rows.map(r => (r.kind === 'window' ? r.label : r.kind === 'sleep' ? r.label : r.event.Type))).toEqual([
-      'Night', 'NightWaking', 'Awake 2h 25m', 'Feed', 'Nap 1', 'Awake 2h 30m', 'Nap 2', 'Awake 5h 30m until bedtime'
+      'Night', 'Feed', 'NightWaking', 'Awake 2h 25m', 'Feed', 'Nap 1', 'Awake 2h 30m', 'Nap 2', 'Awake 5h 30m until bedtime'
     ]);
-    expect(timeline).toMatchObject({ napCount: 2, feedCount: 1, nursingTotal: 12 * 60_000 });
+    expect(timeline).toMatchObject({ napCount: 2, feedCount: 2, nursingTotal: 22 * 60_000 });
+    expect(dayTimeline(events, at(7, '00:00'), at(9, '12:00')).rows).toEqual([]);
     expect(timeline.napTotal).toBe(2 * 60 * 60_000);
   });
 
