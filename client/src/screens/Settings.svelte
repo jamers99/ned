@@ -101,6 +101,10 @@
       <div class="eyebrow">Signed in as {status.user}</div>
       <button class="chip" onclick={leave}>Sign out</button>
     </section>
+
+    <div class="version">
+      Version {new Date(__BUILD_TIME__).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+    </div>
   </div>
 </div>
 
@@ -174,5 +178,11 @@
 
   .chip {
     align-self: flex-start;
+  }
+
+  .version {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
   }
 </style>

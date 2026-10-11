@@ -5,11 +5,15 @@ import { entitySets, fields, fromServer, parseInstant, toServer } from './wire.t
 
 const batchLimit = 200;
 const maxBackoff = 60_000;
+// When Android suspends the app mid-request, the request can hang for minutes instead of failing.
+// A sync that takes longer than this is abandoned and retried.
+const syncTimeout = 30_000;
 // Rows are stamped before their transaction commits, so a slow save can land just behind the cursor.
 // Re-reading a minute of overlap catches it; unchanged rows are skipped.
 const pullOverlap = 60_000;
 
 let running: Promise<void> | null = null;
+let currentRun: AbortController | null = null;
 let runAgain = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let failures = 0;
@@ -35,22 +39,31 @@ export function syncNow(): Promise<void> {
   return running;
 }
 
+/** Gives up on a sync still in flight, e.g. one left hanging while the app was in the background. */
+export function abandonSync() {
+  currentRun?.abort();
+}
+
 async function pushThenPull() {
   if (!status.user) return;
+  const run = (currentRun = new AbortController());
+  const timeout = setTimeout(() => run.abort(), syncTimeout);
   status.syncing = true;
   try {
-    const pushError = await push();
-    await pull();
+    const pushError = await push(run.signal);
+    await pull(run.signal);
     if (pushError) throw new Error(pushError);
     failures = 0;
     status.lastSyncedAt = Date.now();
     status.error = '';
   } catch (error) {
-    status.error = error instanceof Error ? error.message : String(error);
+    status.error = run.signal.aborted ? 'The connection stalled. Retrying.'
+      : error instanceof Error ? error.message : String(error);
     if (error instanceof SignInRequired) return;
     failures++;
     scheduleSync(Math.min(maxBackoff, 1000 * 2 ** failures));
   } finally {
+    clearTimeout(timeout);
     status.syncing = false;
   }
 }
@@ -64,14 +77,14 @@ interface Pending {
  * Upserts dirty rows: PATCH everything, then POST the rows the server has never seen.
  * Returns why some rows were not saved, or an empty string. Failed rows stay dirty and retry later.
  */
-export async function push(): Promise<string> {
+export async function push(signal: AbortSignal): Promise<string> {
   for (;;) {
     const pending = await dirtyRows();
     if (pending.length === 0) return '';
 
-    const patches = await sendBatch(pending, 'PATCH');
+    const patches = await sendBatch(pending, 'PATCH', signal);
     const missing = pending.filter((_, i) => patches[i].status === 404);
-    const posts = missing.length ? await sendBatch(missing, 'POST') : [];
+    const posts = missing.length ? await sendBatch(missing, 'POST', signal) : [];
 
     const failed = [...patches.filter(r => r.status !== 404), ...posts].filter(r => r.status >= 300);
     if (failed.length) return `${failed.length} change(s) not saved yet: ${failed[0].message}`;
@@ -94,7 +107,7 @@ interface BatchResult {
   message: string;
 }
 
-async function sendBatch(pending: Pending[], method: 'PATCH' | 'POST'): Promise<BatchResult[]> {
+async function sendBatch(pending: Pending[], method: 'PATCH' | 'POST', signal: AbortSignal): Promise<BatchResult[]> {
   const requests = pending.map(({ table, row }, i) => ({
     id: String(i),
     method,
@@ -106,7 +119,8 @@ async function sendBatch(pending: Pending[], method: 'PATCH' | 'POST'): Promise<
   const response = await apiFetch('/api/$batch', {
     method: 'POST',
     headers: { 'content-type': 'application/json', prefer: 'odata.continue-on-error' },
-    body: JSON.stringify({ requests })
+    body: JSON.stringify({ requests }),
+    signal
   });
   if (!response.ok) throw new Error(`Push failed: ${await messageFrom(response)}`);
 
@@ -130,7 +144,7 @@ async function markPushed(table: SyncedTable, pushed: Synced) {
 }
 
 /** Pulls rows changed since each table's cursor, deleted rows included. Local unpushed edits win. */
-export async function pull() {
+export async function pull(signal: AbortSignal) {
   for (const table of syncedTables) {
     const cursor = (await getMeta<number>(`cursor:${table}`)) ?? 0;
     const since = new Date(Math.max(0, cursor - pullOverlap)).toISOString();
@@ -139,7 +153,7 @@ export async function pull() {
     let newest = cursor;
 
     while (url) {
-      const response = await apiFetch(url);
+      const response = await apiFetch(url, { signal });
       if (!response.ok) throw new Error(`Pull failed: ${await messageFrom(response)}`);
       const page = await response.json() as { value: Record<string, unknown>[]; '@odata.nextLink'?: string };
       await merge(table, page.value);

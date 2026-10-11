@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { newEvent } from './actions.ts';
 import { db, setMeta, type BabyEvent } from './db.ts';
 import { status } from './state.svelte.ts';
-import { syncNow } from './sync.ts';
+import { abandonSync, syncNow } from './sync.ts';
 
 /** Just enough of the Benevia API: rotating refresh, upserts in $batch, and pulls by ModifiedAt. */
 class FakeServer {
@@ -105,6 +105,22 @@ describe('sync', () => {
     await syncNow();
 
     expect(await db.events.get(local.Guid)).toMatchObject({ dirty: 2, End: Date.UTC(2026, 9, 11, 11) });
+  });
+
+  it('abandons a request left hanging in the background and syncs again on return', async () => {
+    const local = sleep();
+    await db.events.add({ ...local, dirty: 1 });
+    vi.stubGlobal('fetch', (_input: unknown, init?: RequestInit) => new Promise((_, reject) =>
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))));
+    const stuck = syncNow();
+
+    vi.stubGlobal('fetch', server.fetch);
+    abandonSync();
+    await stuck;
+    await syncNow();
+
+    expect(server.rows.has(local.Guid)).toBe(true);
+    expect(await db.events.get(local.Guid)).toMatchObject({ dirty: 0 });
   });
 
   it('keeps working offline and asks for a sign-in when the refresh token is revoked', async () => {

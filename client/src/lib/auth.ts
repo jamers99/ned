@@ -2,6 +2,8 @@ import { db, getMeta, setMeta, syncedTables } from './db.ts';
 import { status } from './state.svelte.ts';
 
 const tenantId = 'Kennedy';
+// Android can leave a request hanging while the app is in the background; give up rather than wait.
+const authTimeout = 15_000;
 
 // The access token lives in memory only. The refresh token is in IndexedDB so phones stay signed in.
 let accessToken = '';
@@ -25,7 +27,8 @@ export async function signIn(username: string, password: string): Promise<string
     response = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ TenantId: tenantId, Username: username.trim(), Password: password })
+      body: JSON.stringify({ TenantId: tenantId, Username: username.trim(), Password: password }),
+      signal: AbortSignal.timeout(authTimeout)
     });
   } catch {
     return 'No connection. Try again when you are online.';
@@ -81,7 +84,8 @@ async function refreshOnce(): Promise<boolean> {
   const response = await fetch('/api/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: oldRefreshToken })
+    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: oldRefreshToken }),
+    signal: AbortSignal.timeout(authTimeout)
   });
   if (response.status === 401 || response.status === 400) {
     status.needsSignIn = true;
