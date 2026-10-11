@@ -49,6 +49,27 @@ public class SyncTests(KennedyApiFactory api) : IClassFixture<KennedyApiFactory>
             "The server stamps ModifiedAt on every save and ignores the value a phone sends.");
     }
 
+    [Fact]
+    public async Task EverySyncedTable_AcceptsPhoneUpserts()
+    {
+        var james = await api.SignInAsync("James", "Dev-james-1");
+        var rows = new (string EntitySet, JsonObject Body)[]
+        {
+            ("Growth", new JsonObject { ["MeasuredAt"] = "2026-09-18T14:00:00Z", ["WeightKg"] = 6.917, ["HeadCm"] = 43.18 }),
+            ("Food", new JsonObject { ["Name"] = $"Mango {Guid.NewGuid():N}", ["Category"] = "Fruit", ["UseCount"] = 1 }),
+            ("Settings", new JsonObject { ["NapsPerDay"] = 2, ["Nap1WakeWindowMinutes"] = 150 }),
+            ("Event", new JsonObject { ["Type"] = "Solids", ["Start"] = "2026-09-20T16:30:00Z", ["Foods"] = "Cereal\nPear" })
+        };
+
+        foreach (var (entitySet, body) in rows)
+        {
+            var guid = Guid.NewGuid();
+            Assert.Equal(HttpStatusCode.OK, await SendBatchAsync(james, "POST", entitySet, WithGuid(body, guid)));
+            var saved = await james.GetFromJsonAsync<JsonObject>($"/api/{entitySet}({guid})?$select=ModifiedAt", cancel);
+            Assert.NotNull(saved!["ModifiedAt"]);
+        }
+    }
+
     async Task<HttpStatusCode> SendBatchAsync(HttpClient client, string method, string url, JsonObject body)
     {
         var batch = new JsonObject

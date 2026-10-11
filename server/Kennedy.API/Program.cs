@@ -14,6 +14,7 @@ builder.Services
     .AddCorePostgres()
     .AddCoreDataGeneration()
     .AddKennedyAPIModel()
+    .AddKennedyAPIDataTypesLogic()
     .AddKennedyAPIBL()
     .AddKennedyAPIEndpoints()
     .AddCoreApiEvents(
