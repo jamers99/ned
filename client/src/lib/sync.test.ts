@@ -11,9 +11,11 @@ class FakeServer {
   clock = Date.UTC(2026, 9, 11, 12);
   onBatch: () => Promise<void> = async () => {};
 
+  // Like PostgreSQL, stamps carry microseconds.
   save(guid: string, fields: Record<string, unknown>) {
     this.clock += 1;
-    this.rows.set(guid, { ...this.rows.get(guid), ...fields, Guid: guid, ModifiedAt: new Date(this.clock).toISOString() });
+    const modifiedAt = new Date(this.clock).toISOString().replace('Z', '123Z');
+    this.rows.set(guid, { ...this.rows.get(guid), ...fields, Guid: guid, ModifiedAt: modifiedAt });
   }
 
   fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {

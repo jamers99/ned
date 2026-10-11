@@ -29,6 +29,11 @@ const timeFields: Record<SyncedTable, string[]> = {
 
 type Row = Record<string, unknown>;
 
+/** Parses a server instant. The server sends microseconds; trim to milliseconds so every browser parses it. */
+export function parseInstant(value: string): number {
+  return Date.parse(value.replace(/(\.\d{3})\d+/, '$1'));
+}
+
 /** The request body for a row: everything except the key, the server's stamp and local bookkeeping. */
 export function toServer(table: SyncedTable, row: object): Row {
   const body: Row = {};
@@ -48,7 +53,7 @@ export function fromServer(table: SyncedTable, json: Row): Row {
   for (const field of fields[table])
     row[field] = json[field];
   for (const field of timeFields[table])
-    row[field] = row[field] == null ? null : Date.parse(row[field] as string);
+    row[field] = row[field] == null ? null : parseInstant(row[field] as string);
   if (table === 'events')
     row.Foods = ((row.Foods as string | null) ?? '').split('\n').filter(Boolean);
   for (const field of ['LoggedBy', 'Text', 'Name'])

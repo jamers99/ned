@@ -1,7 +1,7 @@
 import { db, getMeta, setMeta, syncedTable, syncedTables, type Synced, type SyncedTable } from './db.ts';
 import { apiFetch, messageFrom, SignInRequired } from './auth.ts';
 import { status } from './state.svelte.ts';
-import { entitySets, fields, fromServer, toServer } from './wire.ts';
+import { entitySets, fields, fromServer, parseInstant, toServer } from './wire.ts';
 
 const batchLimit = 200;
 const maxBackoff = 60_000;
@@ -82,6 +82,7 @@ export async function push(): Promise<string> {
 async function dirtyRows(): Promise<Pending[]> {
   const pending: Pending[] = [];
   for (const table of syncedTables) {
+    if (pending.length >= batchLimit) break;
     const rows = await syncedTable(table).where('dirty').above(0).limit(batchLimit - pending.length).toArray();
     pending.push(...rows.map(row => ({ table, row })));
   }
@@ -143,7 +144,7 @@ export async function pull() {
       const page = await response.json() as { value: Record<string, unknown>[]; '@odata.nextLink'?: string };
       await merge(table, page.value);
       for (const row of page.value)
-        newest = Math.max(newest, Date.parse(row.ModifiedAt as string));
+        newest = Math.max(newest, parseInstant(row.ModifiedAt as string));
       url = page['@odata.nextLink'] ?? null;
     }
 
