@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\Generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Benevia.Core.API.Events" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.API.Postgres" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.DataGenerator" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.Events.DataTypes" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.Postgres" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.API.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Benevia.Core.API.Postgres.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Benevia.Core.Events.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" />
+    <PackageReference Include="Benevia.Core.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kennedy.API.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Benevia.Core.Events.DataTypes">
+      <Alias>DataTypes</Alias>
+    </Using>
+    <Using Include="Benevia.Core.Annotations" />
+    <Using Include="Benevia.Core.Events" />
+    <Using Include="System.ComponentModel.DataAnnotations" />
+  </ItemGroup>
+</Project>
