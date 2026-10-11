@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register';
 import './app.css';
 import App from './App.svelte';
 import { loadUser } from './lib/auth.ts';
+import { watchDiagnostics } from './lib/diagnostics.svelte.ts';
 import { listenForBack } from './lib/nav.svelte.ts';
 import { startClock, watchForProblems } from './lib/state.svelte.ts';
 import { abandonSync, syncNow } from './lib/sync.ts';
@@ -18,6 +19,7 @@ registerSW({
   }
 });
 watchForProblems();
+watchDiagnostics();
 startClock();
 listenForBack();
 

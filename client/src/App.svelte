@@ -1,6 +1,7 @@
 <script lang="ts">
   import TabBar from './components/TabBar.svelte';
   import { db, type BabyEvent, type Settings as SettingsRow } from './lib/db.ts';
+  import { diagnostics } from './lib/diagnostics.svelte.ts';
   import { settingsGuid } from './lib/ids.ts';
   import { nav, open } from './lib/nav.svelte.ts';
   import { defaultTargets, latestRunning } from './lib/sleep.ts';
@@ -59,7 +60,9 @@
   <SignIn />
 {:else if recent.value}
   <main class:dark>
-    {#if status.needsSignIn}
+    {#if diagnostics.stuck}
+      <div class="banner">The phone's database stopped answering. Close the app fully and reopen it.</div>
+    {:else if status.needsSignIn}
       <button class="banner" onclick={() => open({ kind: 'signin' })}>Sign in to sync</button>
     {/if}
     {#if nav.tab === 'now'}

@@ -1,4 +1,5 @@
 import { liveQuery } from 'dexie';
+import { note, startWaiting, stopWaiting } from './diagnostics.svelte.ts';
 
 /** One shared clock for every running timer. Timers render from start times, never by accumulating. */
 export const clock = $state({ now: Date.now() });
@@ -10,9 +11,7 @@ export const status = $state({
   needsSignIn: false,
   syncing: false,
   lastSyncedAt: 0,
-  error: '',
-  /** Recent unexpected errors, newest first, shown in Settings to help diagnose problems on a phone. */
-  problems: [] as { at: number; message: string }[]
+  error: ''
 });
 
 // Bumped when the app returns to the foreground, so every live query starts over with a fresh read.
@@ -28,8 +27,7 @@ export function startClock() {
 }
 
 export function reportProblem(error: unknown) {
-  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-  status.problems = [{ at: Date.now(), message }, ...status.problems].slice(0, 5);
+  note(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
 }
 
 export function watchForProblems() {
@@ -46,11 +44,18 @@ export function live<T, D = undefined>(query: (deps: D) => Promise<T>, initial: 
   $effect(() => {
     void resumed;
     const current = deps?.() as D;
+    const ticket = startWaiting();
     const subscription = liveQuery(() => query(current)).subscribe({
-      next: result => (value = result),
+      next: result => {
+        stopWaiting(ticket);
+        value = result;
+      },
       error: reportProblem
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      stopWaiting(ticket);
+      subscription.unsubscribe();
+    };
   });
   return {
     get value() {

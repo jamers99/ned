@@ -4,6 +4,7 @@
   import { signOut } from '../lib/auth.ts';
   import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
   import { settingsGuid } from '../lib/ids.ts';
+  import { diagnostics } from '../lib/diagnostics.svelte.ts';
   import { rise } from '../lib/motion.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { defaultTargets } from '../lib/sleep.ts';
@@ -89,12 +90,19 @@
         </tbody>
       </table>
       <button class="chip" onclick={() => syncNow()}>Sync now</button>
-      {#if status.problems.length}
-        <div class="eyebrow">Recent problems</div>
-        {#each status.problems as problem (problem.at + problem.message)}
-          <div class="error">{clockTime(problem.at)} · {problem.message}</div>
-        {/each}
-      {/if}
+    </section>
+
+    <section class="card list">
+      <div class="eyebrow">Diagnostics</div>
+      <div class="diagnostic">{navigator.userAgent}</div>
+      {#each diagnostics.log as entry, i (i)}
+        <div class="diagnostic">
+          {new Date(entry.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })} ·
+          {entry.message}
+        </div>
+      {:else}
+        <div class="diagnostic">Nothing yet.</div>
+      {/each}
     </section>
 
     <section class="card list">
@@ -178,6 +186,13 @@
 
   .chip {
     align-self: flex-start;
+  }
+
+  .diagnostic {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    overflow-wrap: anywhere;
   }
 
   .version {
