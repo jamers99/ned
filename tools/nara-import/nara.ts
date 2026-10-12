@@ -50,40 +50,30 @@ export function parseCsv(text: string): CsvRow[] {
     .map(r => Object.fromEntries(names.map((name, i) => [name, (r[i] ?? '').trim()])));
 }
 
-// Column names from the Nara export. The exact names of the duration, unit, food and growth columns are matched
-// by pattern because they vary; run with --dry-run to check what was picked.
+// Nara's column names. Times are epoch ms (UTC); the other time columns can mix time zones from travel.
 const columns = {
-  type: /^Type$/i,
-  key: /^_activityKey$/i,
-  start: /^Start Date\/time \(Epoch\)$/i,
-  sleepEnd: /^Sleep End \(Epoch\)$/i,
-  beginSide: /^Begin Side$/i,
-  leftDuration: /left.*duration|duration.*left/i,
-  rightDuration: /right.*duration|duration.*right/i,
-  breastMilkVolume: /^Breast Milk Volume$/i,
-  volume: /^Volume$/i,
-  volumeUnit: /volume.*unit/i,
-  foods: /^(solid|food)/i,
-  weight: /^weight(?!.*unit)/i,
-  weightUnit: /weight.*unit/i,
-  length: /^(length|height)(?!.*unit)/i,
-  lengthUnit: /(length|height).*unit/i,
-  head: /^head(?!.*unit)/i,
-  headUnit: /head.*unit/i,
-  note: /^notes?$/i
+  type: 'Type',
+  key: '_activityKey',
+  start: 'Start Date/time (Epoch)',
+  note: 'Note',
+  beginSide: '[Breastfeed] Begin Side',
+  leftSeconds: '[Breastfeed] Left Duration (Seconds)',
+  rightSeconds: '[Breastfeed] Right Duration (Seconds)',
+  breastMilk: '[Bottle Feed] Breast Milk Volume',
+  breastMilkUnit: '[Bottle Feed] Breast Milk Volume Unit',
+  formula: '[Bottle Feed] Formula Volume',
+  formulaUnit: '[Bottle Feed] Formula Volume Unit',
+  volume: '[Bottle Feed] Volume',
+  volumeUnit: '[Bottle Feed] Volume Unit',
+  foods: '[Solid Feed] Food',
+  sleepEnd: '[Sleep] End Date/time (Epoch)',
+  weight: '[Growth] Weight',
+  weightUnit: '[Growth] Weight Unit',
+  length: '[Growth] Height',
+  lengthUnit: '[Growth] Height Unit',
+  head: '[Growth] Head Size',
+  headUnit: '[Growth] Head Size Unit'
 };
-
-export type Columns = Partial<Record<keyof typeof columns, string>>;
-
-/** Picks the export's header for each column we read. Throws if one we cannot do without is missing. */
-export function findColumns(headers: string[]): Columns {
-  const found: Columns = {};
-  for (const [key, pattern] of Object.entries(columns) as [keyof typeof columns, RegExp][])
-    found[key] = headers.find(h => pattern.test(h));
-  const missing = (['type', 'key', 'start'] as const).filter(key => !found[key]);
-  if (missing.length) throw new Error(`The CSV has no ${missing.join(', ')} column. Headers: ${headers.join(', ')}`);
-  return found;
-}
 
 export interface Imported {
   events: Partial<BabyEvent>[];
@@ -95,11 +85,12 @@ export interface Imported {
 
 const kgPerLb = 0.45359237;
 const cmPerIn = 2.54;
-const mlPerFlOz = 29.5735;
+const ozPerMl = 1 / 29.5735;
 
 export async function mapRows(rows: CsvRow[]): Promise<Imported> {
-  const c = findColumns(Object.keys(rows[0] ?? {}));
-  const get = (row: CsvRow, key: keyof Columns) => (c[key] ? row[c[key]!] ?? '' : '');
+  const missing = Object.values(columns).filter(name => rows.length && !(name in rows[0]));
+  if (missing.length) throw new Error(`The CSV has no ${missing.join(', ')} column.`);
+  const get = (row: CsvRow, key: keyof typeof columns) => row[columns[key]] ?? '';
   const result: Imported = { events: [], growth: [], foods: [], counts: {}, skipped: {} };
   const foodUse = new Map<string, { name: string; count: number; last: number }>();
 
@@ -111,8 +102,8 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
 
     switch (type) {
       case 'Breastfeed': {
-        const left = seconds(get(row, 'leftDuration'), c.leftDuration);
-        const right = seconds(get(row, 'rightDuration'), c.rightDuration);
+        const left = Number(get(row, 'leftSeconds')) || 0;
+        const right = Number(get(row, 'rightSeconds')) || 0;
         result.events.push({
           ...base, Type: 'Feed', FeedKind: 'Nursing', LeftSeconds: left, RightSeconds: right,
           StartSide: side(get(row, 'beginSide')), End: start + (left + right) * 1000
@@ -120,13 +111,14 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
         break;
       }
       case 'Bottle Feed': {
-        const ml = /ml/i.test(get(row, 'volumeUnit'));
-        const amount = Number(get(row, 'breastMilkVolume') || get(row, 'volume')) || 0;
-        const oz = ml ? amount / mlPerFlOz : amount;
+        const oz = measure(get(row, 'breastMilk'), get(row, 'breastMilkUnit'), { floz: 1, ml: ozPerMl })
+          ?? measure(get(row, 'formula'), get(row, 'formulaUnit'), { floz: 1, ml: ozPerMl })
+          ?? measure(get(row, 'volume'), get(row, 'volumeUnit'), { floz: 1, ml: ozPerMl }) ?? 0;
         result.events.push({ ...base, Type: 'Feed', FeedKind: 'Bottle', BottleOz: Math.round(oz * 100) / 100, End: start });
         break;
       }
       case 'Solid Feed': {
+        // Older entries look like "Cereal: amountKey=ALL; reactionKey=LOVE"; newer ones are just the name.
         const entries = get(row, 'foods').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
         const foods = entries.map(entry => entry.split(':')[0].trim()).filter(Boolean);
         for (const name of foods) {
@@ -134,8 +126,8 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
           const use = foodUse.get(key) ?? { name, count: 0, last: 0 };
           foodUse.set(key, { name: use.name, count: use.count + 1, last: Math.max(use.last, start) });
         }
-        const amounts = entries.map(entry => solidAmount(entry)).filter(a => a != null);
-        result.events.push({ ...base, Type: 'Solids', Foods: foods, SolidAmount: amounts[0] ?? null, End: start });
+        const amount = entries.map(solidAmount).find(a => a != null) ?? null;
+        result.events.push({ ...base, Type: 'Solids', Foods: foods, SolidAmount: amount, End: start });
         break;
       }
       case 'Sleep': {
@@ -144,11 +136,11 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
         break;
       }
       case 'Growth': {
-        const weight = measure(get(row, 'weight'), get(row, 'weightUnit') || c.weight, { lb: kgPerLb, kg: 1 });
-        const length = measure(get(row, 'length'), get(row, 'lengthUnit') || c.length, { in: cmPerIn, cm: 1 });
-        const head = measure(get(row, 'head'), get(row, 'headUnit') || c.head, { in: cmPerIn, cm: 1 });
         result.growth.push({
-          Guid: guid, MeasuredAt: start, WeightKg: weight, LengthCm: length, HeadCm: head, LoggedBy: 'Nara', Deleted: false
+          Guid: guid, MeasuredAt: start, LoggedBy: 'Nara', Deleted: false,
+          WeightKg: measure(get(row, 'weight'), get(row, 'weightUnit'), { lb: kgPerLb, kg: 1 }),
+          LengthCm: measure(get(row, 'length'), get(row, 'lengthUnit'), { in: cmPerIn, cm: 1 }),
+          HeadCm: measure(get(row, 'head'), get(row, 'headUnit'), { in: cmPerIn, cm: 1 })
         });
         break;
       }
@@ -168,23 +160,13 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
   return result;
 }
 
-/** "LEFT", "Left.nonTimer" → "Left". */
+/** "LEFT" → "Left". */
 function side(value: string): BabyEvent['StartSide'] {
-  const plain = value.replace(/\.nonTimer$/i, '').toLowerCase();
+  const plain = value.toLowerCase();
   return plain === 'left' ? 'Left' : plain === 'right' ? 'Right' : null;
 }
 
-/** Blank is 0. Accepts "m:ss" / "h:mm:ss", or a number in the unit the header names (seconds by default). */
-function seconds(value: string, header = ''): number {
-  if (!value) return 0;
-  if (value.includes(':')) return value.split(':').map(Number).reduce((total, part) => total * 60 + part, 0);
-  const n = Number(value) || 0;
-  if (/\(ms\)|milli/i.test(header)) return Math.round(n / 1000);
-  if (/\(min|minute/i.test(header)) return Math.round(n * 60);
-  return Math.round(n);
-}
-
-/** "Cereal: amountKey=ALL; reactionKey=LOVE" → All. */
+/** "amountKey=LITTLE" → Taste, "ALL" → All, any other amount → Some. */
 function solidAmount(entry: string): SolidAmount | null {
   const key = entry.match(/amountKey=(\w+)/i)?.[1]?.toUpperCase();
   if (key === 'LITTLE') return 'Taste';
@@ -192,10 +174,9 @@ function solidAmount(entry: string): SolidAmount | null {
   return key ? 'Some' : null;
 }
 
-/** A value in the unit named by its unit column (or header), converted to kg or cm. Blank is null. */
+/** A value converted by the factor for its unit ("LB", "FLOZ", ...), rounded to 3 places. Blank is null. */
 function measure(value: string, unit: string, factors: Record<string, number>): number | null {
   if (!value) return null;
-  const [, factor] = Object.entries(factors).find(([u]) => new RegExp(`\\b${u}\\b`, 'i').test(unit))
-    ?? Object.entries(factors)[0];
+  const factor = factors[unit.toLowerCase()] ?? Object.values(factors)[0];
   return Math.round(Number(value) * factor * 1000) / 1000;
 }

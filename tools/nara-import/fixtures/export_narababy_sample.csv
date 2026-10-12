@@ -1,9 +1,9 @@
-﻿_activityKey,Type,Start Date/time,Start Date/time (Epoch),Sleep End (Epoch),Begin Side,Left Duration (sec),Right Duration (sec),Breast Milk Volume,Volume,Volume Unit,Solid Foods,Weight,Weight Unit,Height,Height Unit,Head Size,Head Size Unit,Note
--NaraFeed1,Breastfeed,2026-09-20 02:10,1789884600000,,LEFT.nonTimer,420,,,,,,,,,,,,
--NaraBottle1,Bottle Feed,2026-09-20 09:00,1789909200000,,,,,,4,FLOZ,,,,,,,,
--NaraSolid1,Solid Feed,2026-09-20 12:30,1789921800000,,,,,,,,"Cereal: amountKey=ALL; reactionKey=LOVE
-Sweet Potato: amountKey=LITTLE; reactionKey=OKAY",,,,,,,"first time, ""loved"" it"
--NaraSleep1,Sleep,2026-09-20 19:05,1789945500000,1789987200000,,,,,,,,,,,,,,
--NaraNap1,Sleep,2026-09-21 09:05,1789995900000,1790000400000,,,,,,,,,,,,,,
--NaraGrowth1,Growth,2026-09-18 10:00,1789740000000,,,,,,,,,15.25,LB,26.5,IN,17,IN,
--NaraDiaper1,Diaper,2026-09-20 08:00,1789905600000,,,,,,,,,,,,,,,
+﻿"Type","Start Date/time","Start Date/time (Epoch)","Note","[Breastfeed] Begin Side","[Breastfeed] Left Duration (Seconds)","[Breastfeed] Right Duration (Seconds)","[Solid Feed] Food","[Sleep] End Date/time (Epoch)","[Bottle Feed] Breast Milk Volume","[Bottle Feed] Breast Milk Volume Unit","[Bottle Feed] Formula Volume","[Bottle Feed] Formula Volume Unit","[Bottle Feed] Volume","[Bottle Feed] Volume Unit","[Growth] Head Size","[Growth] Head Size Unit","[Growth] Height","[Growth] Height Unit","[Growth] Weight","[Growth] Weight Unit","_activityKey"
+"Breastfeed","2026-09-20 02:10","1789884600000","","LEFT","420","","","","","","","","","","","","","","","","-NaraFeed1"
+"Bottle Feed","2026-09-20 09:00","1789909200000","","","","","","","4","FLOZ","","","","","","","","","","","-NaraBottle1"
+"Solid Feed","2026-09-20 12:30","1789921800000","first time, ""loved"" it","","","","Cereal: amountKey=ALL; reactionKey=LOVE
+Sweet Potato","","","","","","","","","","","","","","-NaraSolid1"
+"Sleep","2026-09-20 19:05","1789945500000","","","","","","1789987200000","","","","","","","","","","","","","-NaraSleep1"
+"Sleep","2026-09-21 09:05","1789995900000","","","","","","1790000400000","","","","","","","","","","","","","-NaraNap1"
+"Growth","2026-09-18 10:00","1789740000000","","","","","","","","","","","","","17","IN","26.5","IN","15.25","LB","-NaraGrowth1"
+"Diaper","2026-09-20 08:00","1789905600000","","","","","","","","","","","","","","","","","","","-NaraDiaper1"
