@@ -16,83 +16,46 @@ cd client && npm install && npm run build
 cd server && dotnet run --project Ned.API --launch-profile http
 ```
 
-Open http://localhost:5205. The first start creates the `ned` database and two parents from
-`appsettings.Development.json`: `Alex` / `Dev-alex-1` and `Sam` / `Dev-sam-1`.
-
-For client work with hot reload, run `npm run dev` in `client/` and open http://localhost:5173. It proxies
-`/api` to the server.
+Open http://localhost:5205 and sign in as `Alex` / `Dev-alex-1` or `Sam` / `Dev-sam-1`. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
 
 ## Tests
-
-```bash
-cd server && dotnet test Ned.slnx
-```
 
 ```bash
 cd client && npm run check && npm test
 ```
 
 ```bash
+cd server && dotnet test Ned.slnx
+```
+
+```bash
 node --test tools/nara-import/nara.test.ts
 ```
 
-The server tests recreate a `ned_tests` database on each run.
-
 ## Deploy
 
-Ned runs on Azure App Service (`ned-baby` in resource group `rg-ned`) with a [Neon](https://neon.tech) Postgres
-database. GitHub Actions runs the tests on every pull request and push, and every push to `main` that passes is
-deployed with `./deploy.sh`. To deploy from your own machine, sign in with `az login` and run it yourself.
+Every push to `main` that passes the tests deploys to Azure App Service through `./deploy.sh`. The database is on [Neon](https://neon.tech).
 
-The first time, sign in with `az login` and `gh auth login` and run `./setup.sh`. It confirms the subscription,
-creates the Azure resources, and asks for:
-- the Neon connection string (the .NET one);
-- the parents' names, and a password for each (8+ characters with upper, lower, digit and symbol).
+To set it up the first time, sign in with `az login` and `gh auth login`, then run `./setup.sh`. It creates the Azure resources, asks for the Neon connection string and the parents' passwords, and lets GitHub Actions deploy. Leave the encryption key it generates alone: changing it signs everyone out.
 
-It also does three more things:
-- generates the token key and the admin password;
-- creates an identity that only `main` can sign in as, so GitHub Actions can deploy. It signs in through OIDC, so no
-  Azure secret is stored in GitHub;
-- deploys.
+On each phone, open the site, choose **Add to Home Screen**, and sign in from the installed app. On iPhone, the installed app keeps its own storage, separate from Safari.
 
-The parents are created on the first start. The secrets live in the app's settings as
-`Tenants__Ned__ConnectionString`, `Tenants__Ned__EncryptionKey`, `Tenants__Ned__AdminPassword` and
-`Parents__<Name>`. Keep the token key stable: changing it signs both phones out.
+## Import from Nara
 
-The free plan (F1) sleeps when idle, so the first sync after a quiet spell takes a few seconds. The app never waits
-on it. If the app crashes repeatedly, the free plan stops it until its quota resets. B1 stays awake, for about $13 a
-month:
+Export the CSV from Nara (Activity → tap the avatar → Export Data) and check it with a dry run:
 
 ```bash
-az appservice plan update --resource-group rg-ned --name plan-ned --sku B1
+node tools/nara-import/import.ts export.csv --dry-run
 ```
 
-### Phones
-
-On each phone, open the site in Safari or Chrome, choose **Add to Home Screen**, and sign in from the
-installed app. On iPhone, the home-screen app has its own storage, separate from Safari.
-
-## Import the Nara history
-
-Export the CSV from Nara (Activity → tap the avatar → Export Data), then check the mapping first:
-
-```bash
-node tools/nara-import/import.ts export_narababy_baby_20261010.csv --dry-run
-```
-
-The dry run prints the row counts, the average breastfeed length, and a sample row of each kind. The
-duration, unit, food and growth column names vary between exports, so they are matched by pattern in
-`tools/nara-import/nara.ts`. If a count or sample looks off, adjust the `columns` map there.
-
-Then import. Re-running is safe: each row's `Guid` comes from its Nara key.
+If a count or sample looks off, adjust the `columns` map in `tools/nara-import/nara.ts`. Then import as one of the parents. Re-running is safe.
 
 ```bash
 read -s NED_PASSWORD && export NED_PASSWORD
 ```
 
 ```bash
-node tools/nara-import/import.ts export_narababy_baby_20261010.csv --server https://ned-baby.azurewebsites.net --user Alex
+node tools/nara-import/import.ts export.csv --server https://ned-baby.azurewebsites.net --user Alex
 ```
 
-The "night" flag on imported sleeps uses the importing computer's time zone, so run it in the family's
-time zone (or set `TZ`).
+Run the import in the baby's time zone (or set `TZ`), since that decides which sleeps count as night.
