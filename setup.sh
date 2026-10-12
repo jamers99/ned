@@ -33,10 +33,11 @@ done
 az webapp config appsettings set "${group[@]}" --name $app --settings "${settings[@]}"
 
 # GitHub Actions deploys main as this identity, signing in with OIDC, so no Azure secret is stored in GitHub.
+# GitHub's token names the owner and repo with their IDs, as in repo:owner@123/name@456:ref:refs/heads/main.
 az identity create "${group[@]}" --name id-ned-github
 az identity federated-credential create "${group[@]}" --identity-name id-ned-github --name main \
   --issuer https://token.actions.githubusercontent.com --audiences api://AzureADTokenExchange \
-  --subject "repo:$(gh repo view --json nameWithOwner --jq .nameWithOwner):ref:refs/heads/main"
+  --subject "$(gh api 'repos/{owner}/{repo}' --jq '"repo:\(.owner.login)@\(.owner.id)/\(.name)@\(.id):ref:refs/heads/main"')"
 az role assignment create --role 'Website Contributor' --assignee-principal-type ServicePrincipal \
   --assignee-object-id "$(az identity show "${group[@]}" --name id-ned-github --query principalId --output tsv)" \
   --scope "$(az webapp show "${group[@]}" --name $app --query id --output tsv)"
