@@ -6,13 +6,13 @@ namespace Ned.API.Parents;
 [Logic]
 public class ParentsBL(IResponsibilityRegistry access)
 {
-    public const string TrackKennedy = "Track Kennedy";
+    public const string TrackBaby = "Track the baby";
 
     [RegisterLogic]
     public void DefineResponsibilities()
     {
         // ModifiedAt is writable here, but the PreSave stamp always overwrites what a phone sends.
-        access.AddResponsibility(TrackKennedy, "Log and review Kennedy's sleep, feeds, solids, notes and growth.",
+        access.AddResponsibility(TrackBaby, "Log and review the baby's sleep, feeds, solids, notes and growth.",
             grant =>
             {
                 grant.Entity<Event>().CreateAndDelete().WriteForAllProperties();

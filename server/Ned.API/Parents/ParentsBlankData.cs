@@ -31,10 +31,10 @@ public class ParentsBlankData : ICreateData
             Id = Guid.NewGuid(),
             Name = ParentRole,
             NormalizedName = ParentRole.ToUpperInvariant(),
-            Description = "A parent can log and review everything about Kennedy."
+            Description = "A parent can log and review everything about the baby."
         };
         dataContext.AddEntity(role);
-        role.AddResponsibility(dataContext, ParentsBL.TrackKennedy);
+        role.AddResponsibility(dataContext, ParentsBL.TrackBaby);
 
         foreach (var user in users)
             dataContext.AddEntity(new UserRole { UserId = user.Id, RoleId = role.Id });

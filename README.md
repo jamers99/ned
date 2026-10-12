@@ -1,8 +1,11 @@
 # Ned
 
-A private, sleep-first baby tracker for two parents. An offline-first PWA (`client/`) syncs through a
-Benevia Core API (`server/`), which also serves the app. See [CLAUDE.md](CLAUDE.md) for the product spec
-and the sync design.
+A calm, sleep-first baby tracker for two parents, built to be used one-handed at 3am. An offline-first PWA
+(`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap lands on the
+phone first; the server is only for sync and backup. See [CLAUDE.md](CLAUDE.md) for the product spec and the
+sync design.
+
+Ned is built for one family and one baby, so there's no sign-up: the parents are set in configuration.
 
 ## Run it locally
 
@@ -18,7 +21,7 @@ cd server && dotnet run --project Ned.API --launch-profile http
 ```
 
 Open http://localhost:5205. The first start creates the `ned` database and two parents from
-`appsettings.Development.json`: `Natalie` / `Dev-natalie-1` and `James` / `Dev-james-1`.
+`appsettings.Development.json`: `Alex` / `Dev-alex-1` and `Sam` / `Dev-sam-1`.
 
 For client work with hot reload, run `npm run dev` in `client/` and open http://localhost:5173. It proxies
 `/api` to the server.
@@ -41,17 +44,16 @@ The server tests recreate a `ned_tests` database on each run.
 
 ## Deploy
 
-Ned runs on Azure App Service's free Linux plan (`ned-baby` in resource group `rg-ned`, on James's personal
-subscription) with a free [Neon](https://neon.tech) Postgres database. To ship a new version, sign in with
-`az login` and run:
+Ned runs on Azure App Service's free Linux plan (`ned-baby` in resource group `rg-ned`) with a free
+[Neon](https://neon.tech) Postgres database. To ship a new version, sign in with `az login` and run:
 
 ```bash
 ./deploy.sh
 ```
 
-The first time, `./deploy.sh --setup` creates the Azure resources and asks for three things:
+The first time, `./deploy.sh --setup` confirms the subscription, creates the Azure resources, and asks for:
 - the Neon connection string (the direct one, with pooling off);
-- each parent's password (8+ characters with upper, lower, digit and symbol).
+- the parents' names, and a password for each (8+ characters with upper, lower, digit and symbol).
 
 It also generates the token key and the admin password. The parents are created on the first start against the
 empty database. The secrets live in the app's settings as `Tenants__Ned__ConnectionString`,
@@ -73,14 +75,12 @@ installed app. On iPhone, the home-screen app has its own storage, separate from
 Export the CSV from Nara (Activity → tap the avatar → Export Data), then check the mapping first:
 
 ```bash
-node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --dry-run
+node tools/nara-import/import.ts export_narababy_baby_20261010.csv --dry-run
 ```
 
-The dry run prints the row counts next to the expected ones (about 2,019 breastfeeds, 36 bottles, 165
-solids, 25 sleeps and 11 growth rows), the average breastfeed length, and a sample row of each kind. The
-real export was not available while writing the importer, so the duration, unit, food and growth columns
-are matched by pattern in `tools/nara-import/nara.ts`. If a count or sample looks wrong, adjust the
-`columns` map there.
+The dry run prints the row counts, the average breastfeed length, and a sample row of each kind. The
+duration, unit, food and growth column names vary between exports, so they are matched by pattern in
+`tools/nara-import/nara.ts`. If a count or sample looks off, adjust the `columns` map there.
 
 Then import. Re-running is safe: each row's `Guid` comes from its Nara key.
 
@@ -89,7 +89,7 @@ read -s NED_PASSWORD && export NED_PASSWORD
 ```
 
 ```bash
-node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://ned-baby.azurewebsites.net --user James
+node tools/nara-import/import.ts export_narababy_baby_20261010.csv --server https://ned-baby.azurewebsites.net --user Alex
 ```
 
 The "night" flag on imported sleeps uses the importing computer's time zone, so run it in the family's

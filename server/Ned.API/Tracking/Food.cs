@@ -4,7 +4,7 @@ using Ned.API.Sync;
 namespace Ned.API.Tracking;
 
 /// <summary>
-/// A food Kennedy has tried. Phones derive the <c>Guid</c> from the lower-cased name, so both phones adding
+/// A food the baby has tried. Phones derive the <c>Guid</c> from the lower-cased name, so both phones adding
 /// "Mango" offline end up upserting the same row.
 /// </summary>
 [ApiEntity]

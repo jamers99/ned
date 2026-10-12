@@ -1,23 +1,22 @@
 // One-time import of a Nara Baby CSV export into Ned. Safe to re-run: every row gets a Guid derived
 // from its Nara key, and rows are upserted.
 //
-//   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --dry-run
+//   node tools/nara-import/import.ts export_narababy_baby_20261010.csv --dry-run
 //   read -s NED_PASSWORD; export NED_PASSWORD
-//   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://ned-baby.azurewebsites.net --user James
+//   node tools/nara-import/import.ts export_narababy_baby_20261010.csv --server https://ned-baby.azurewebsites.net --user Alex
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import type { SyncedTable } from '../../client/src/lib/db.ts';
 import { entitySets, toServer } from '../../client/src/lib/wire.ts';
 import { mapRows, parseCsv } from './nara.ts';
 
-const expected: Record<string, number> = { Breastfeed: 2019, 'Bottle Feed': 36, 'Solid Feed': 165, Sleep: 25, Growth: 11 };
 const chunkSize = 200;
 
 const { values: options, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     server: { type: 'string', default: 'http://localhost:5205' },
-    user: { type: 'string', default: 'James' },
+    user: { type: 'string' },
     'dry-run': { type: 'boolean', default: false }
   }
 });
@@ -29,9 +28,8 @@ if (positionals.length !== 1) {
 
 const imported = await mapRows(parseCsv(await readFile(positionals[0], 'utf8')));
 
-console.log('Rows by Nara type (expected):');
-for (const type of new Set([...Object.keys(expected), ...Object.keys(imported.counts)]))
-  console.log(`  ${type.padEnd(12)} ${String(imported.counts[type] ?? 0).padStart(5)}  (${expected[type] ?? '-'})`);
+console.log('Rows by Nara type:');
+for (const [type, count] of Object.entries(imported.counts)) console.log(`  ${type.padEnd(12)} ${String(count).padStart(5)}`);
 console.log('Skipped:', imported.skipped);
 console.log(`Foods: ${imported.foods.length}`);
 
@@ -45,8 +43,8 @@ console.log('Sample growth:', imported.growth[0]);
 if (options['dry-run']) process.exit(0);
 
 const password = process.env.NED_PASSWORD;
-if (!password) {
-  console.error('Set NED_PASSWORD to the password for --user.');
+if (!options.user || !password) {
+  console.error('Pass --user and set NED_PASSWORD to that parent\'s password.');
   process.exit(1);
 }
 

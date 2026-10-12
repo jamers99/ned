@@ -1,6 +1,6 @@
 # Ned — sleep-first baby tracker
 
-A private, two-parent baby tracker built around one goal: help Kennedy (born 2026-03-17) sleep well. Replaces the Nara Baby app. Two users: Natalie (iPhone, logs ~90% of entries) and James (Android).
+A private, two-parent baby tracker built around one goal: help the baby sleep well. Replaces the Nara Baby app. Two users: one parent on iPhone, who logs most entries, and one on Android.
 
 **Non-negotiables**
 - **Feels native and instant.** Every tap updates the UI in the same frame. Nothing in the UI ever waits on the network.
@@ -21,7 +21,7 @@ A private, two-parent baby tracker built around one goal: help Kennedy (born 202
 
 ## Data model (server entities ⇄ Dexie tables, same shape)
 
-All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: "Natalie" | "James"; "Nara" for imported rows). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
+All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: the parent's user name; "Nara" for imported rows). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
 
 **Event** — one table for everything time-based
 | Field | Notes |
@@ -66,7 +66,7 @@ The client owns an outbox. Server is a dumb, reliable store.
 
 Use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is for AI clients and third-party apps; don't use OAuth here. Read the framework's auth code for the exact endpoints and how it returns tokens.
 
-- **Users:** one Benevia user per parent (Natalie, James). Give both one role with full access to Event, Growth, Food and Settings. No other RBAC.
+- **Users:** one Benevia user per parent. Give both one role with full access to Event, Growth, Food and Settings. No other RBAC.
 - **Sign in once per phone:** a first-run screen with username + password. After that, the user should never see a login again unless they sign out or the refresh token is revoked.
 - **Access token:** keep it in memory only, never in localStorage or IndexedDB. It is fine to lose it when the app closes.
 - **Refresh token:**
@@ -89,7 +89,7 @@ Use Benevia Core's built-in login (access token + refresh token). This is NOT th
 
 ## Design
 
-Mockups: https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz (James's canvas — 8 phone screens). Match them.
+Mockups: https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz (8 phone screens). Match them.
 
 Cottage feel: warm linen, sage for sleep, terracotta for awake time and feeds, soft serif for headings and times.
 
@@ -127,7 +127,7 @@ Wake-window logic: awake time = now − end of the last sleep. Target comes from
 
 ## Nara import (`/tools/nara-import`)
 
-Input: `export_narababy_kennedy_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)` column (ms, UTC) for times — the local-time column has mixed time zones from travel. Generate a deterministic Guid per row from `_activityKey` so re-running is idempotent. Push via OData `$batch` in chunks of ~200.
+Input: `export_narababy_<name>_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)` column (ms, UTC) for times — the local-time column can mix time zones. Generate a deterministic Guid per row from `_activityKey` so re-running is idempotent. Push via OData `$batch` in chunks of ~200.
 
 | Nara `Type` | → | Mapping |
 |---|---|---|
@@ -139,7 +139,7 @@ Input: `export_narababy_kennedy_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)`
 | Note column | `Text` | if present |
 | Diaper, Pump, Milestone, Profile | skip | |
 
-Expect roughly 2,019 breastfeeds, 36 bottles, 165 solids, 25 sleeps, 11 growth rows. The duration, unit, food and growth column names were not confirmed against a real export; they are matched by pattern in `tools/nara-import/nara.ts`, so run `--dry-run` first and compare.
+The duration, unit, food and growth column names vary, so they are matched by pattern in `tools/nara-import/nara.ts`. Run `--dry-run` first and check the counts and samples.
 
 ## Build order
 

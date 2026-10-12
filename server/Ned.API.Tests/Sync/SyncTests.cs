@@ -16,8 +16,8 @@ public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
     [Fact]
     public async Task SleepLoggedOnOnePhone_AndDeletedLater_ReachesTheOtherPhone()
     {
-        var natalie = await api.SignInAsync("Natalie", "Dev-natalie-1");
-        var james = await api.SignInAsync("James", "Dev-james-1");
+        var alex = await api.SignInAsync("Alex", "Dev-alex-1");
+        var sam = await api.SignInAsync("Sam", "Dev-sam-1");
         var sleepGuid = Guid.NewGuid();
         var sleep = new JsonObject
         {
@@ -25,24 +25,24 @@ public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
             ["Start"] = "2026-10-10T23:05:00Z",
             ["IsNight"] = true,
             ["SleepLocation"] = "Crib",
-            ["LoggedBy"] = "Natalie"
+            ["LoggedBy"] = "Alex"
         };
 
-        var patchStatus = await SendBatchAsync(natalie, "PATCH", $"Event({sleepGuid})", sleep);
+        var patchStatus = await SendBatchAsync(alex, "PATCH", $"Event({sleepGuid})", sleep);
         Assert.Equal(HttpStatusCode.NotFound, patchStatus);
-        var postStatus = await SendBatchAsync(natalie, "POST", "Event", WithGuid(sleep, sleepGuid));
+        var postStatus = await SendBatchAsync(alex, "POST", "Event", WithGuid(sleep, sleepGuid));
         Assert.Equal(HttpStatusCode.OK, postStatus);
 
-        var firstPull = await PullEventsAsync(james, "2000-01-01T00:00:00Z");
+        var firstPull = await PullEventsAsync(sam, "2000-01-01T00:00:00Z");
         var pulled = Assert.Single(firstPull, e => e["Guid"]!.GetValue<Guid>() == sleepGuid);
         Assert.Equal("Crib", pulled["SleepLocation"]!.GetValue<string>());
         Assert.False(pulled["Deleted"]!.GetValue<bool>());
         var cursor = pulled["ModifiedAt"]!.GetValue<string>();
 
         var delete = new JsonObject { ["Deleted"] = true, ["ModifiedAt"] = "2000-01-01T00:00:00Z" };
-        Assert.Equal(HttpStatusCode.OK, await SendBatchAsync(natalie, "PATCH", $"Event({sleepGuid})", delete));
+        Assert.Equal(HttpStatusCode.OK, await SendBatchAsync(alex, "PATCH", $"Event({sleepGuid})", delete));
 
-        var secondPull = await PullEventsAsync(james, cursor);
+        var secondPull = await PullEventsAsync(sam, cursor);
         var deleted = Assert.Single(secondPull, e => e["Guid"]!.GetValue<Guid>() == sleepGuid);
         Assert.True(deleted["Deleted"]!.GetValue<bool>());
         Assert.True(deleted["ModifiedAt"]!.GetValue<DateTimeOffset>() > DateTimeOffset.Parse(cursor),
@@ -52,7 +52,7 @@ public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
     [Fact]
     public async Task EverySyncedTable_AcceptsPhoneUpserts()
     {
-        var james = await api.SignInAsync("James", "Dev-james-1");
+        var sam = await api.SignInAsync("Sam", "Dev-sam-1");
         var rows = new (string EntitySet, JsonObject Body)[]
         {
             ("Growth", new JsonObject { ["MeasuredAt"] = "2026-09-18T14:00:00Z", ["WeightKg"] = 6.917, ["HeadCm"] = 43.18 }),
@@ -64,8 +64,8 @@ public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
         foreach (var (entitySet, body) in rows)
         {
             var guid = Guid.NewGuid();
-            Assert.Equal(HttpStatusCode.OK, await SendBatchAsync(james, "POST", entitySet, WithGuid(body, guid)));
-            var saved = await james.GetFromJsonAsync<JsonObject>($"/api/{entitySet}({guid})?$select=ModifiedAt", cancel);
+            Assert.Equal(HttpStatusCode.OK, await SendBatchAsync(sam, "POST", entitySet, WithGuid(body, guid)));
+            var saved = await sam.GetFromJsonAsync<JsonObject>($"/api/{entitySet}({guid})?$select=ModifiedAt", cancel);
             Assert.NotNull(saved!["ModifiedAt"]);
         }
     }

@@ -21,7 +21,7 @@ public partial interface ISynced
     bool Deleted { get; set; }
 
     /// <summary>
-    /// The parent who logged the record, for example "Natalie".
+    /// The parent who logged the record, for example "Alex".
     /// </summary>
     [Property<DataTypes.Text>("Logged by")]
     string LoggedBy { get; set; }
