@@ -9,7 +9,7 @@ target=(--resource-group rg-ned)
 app=ned-baby
 
 if [[ ${1:-} == --setup ]]; then
-  read -rp "Create Ned in the subscription \"$(az account show --query name --output tsv)\"? [y/N] " answer
+  read -rp "Create Ned in $(az account show --query '[name, id]' --output tsv | paste -sd ' ')? [y/N] " answer
   [[ $answer == y ]]
 
   az group create --name rg-ned --location eastus --output none
@@ -33,6 +33,19 @@ if [[ ${1:-} == --setup ]]; then
     settings+=("Parents__$parent=$password")
   done
   az webapp config appsettings set "${target[@]}" --name $app --output none --settings "${settings[@]}"
+
+  # GitHub Actions deploys main as this identity, signing in with OIDC, so no Azure secret lives in GitHub.
+  az identity create "${target[@]}" --name id-ned-github --output none
+  client=$(az identity show "${target[@]}" --name id-ned-github --query clientId --output tsv)
+  principal=$(az identity show "${target[@]}" --name id-ned-github --query principalId --output tsv)
+  az identity federated-credential create "${target[@]}" --identity-name id-ned-github --name main \
+    --issuer https://token.actions.githubusercontent.com --audiences api://AzureADTokenExchange \
+    --subject "repo:$(gh repo view --json nameWithOwner --jq .nameWithOwner):ref:refs/heads/main" --output none
+  az role assignment create --assignee-object-id "$principal" --assignee-principal-type ServicePrincipal \
+    --role 'Website Contributor' --scope "$(az webapp show "${target[@]}" --name $app --query id --output tsv)" --output none
+  gh variable set AZURE_CLIENT_ID --body "$client"
+  gh variable set AZURE_TENANT_ID --body "$(az account show --query tenantId --output tsv)"
+  gh variable set AZURE_SUBSCRIPTION_ID --body "$(az account show --query id --output tsv)"
 fi
 
 (cd client && npm ci && npm run build)
@@ -40,5 +53,5 @@ out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 dotnet publish server/Ned.API --configuration Release --output "$out/app"
 (cd "$out/app" && zip -qr ../ned.zip .)
-az webapp deploy "${target[@]}" --name $app --type zip --src-path "$out/ned.zip"
+az webapp deploy "${target[@]}" --name $app --type zip --src-path "$out/ned.zip" --output none
 echo "Deployed to https://$app.azurewebsites.net"
