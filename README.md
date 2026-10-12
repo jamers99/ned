@@ -16,7 +16,7 @@ cd client && npm install && npm run build
 cd server && dotnet run --project Ned.API --launch-profile http
 ```
 
-Open http://localhost:5205 and sign in as `Alex` / `Dev-alex-1` or `Sam` / `Dev-sam-1`. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
+Open http://localhost:5205 and sign in as `John` / `Dev-john-1` or `Jane` / `Dev-jane-1`. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
 
 ## Tests
 
@@ -55,7 +55,7 @@ read -s NED_PASSWORD && export NED_PASSWORD
 ```
 
 ```bash
-node tools/nara-import/import.ts export.csv --server https://ned-baby.azurewebsites.net --user Alex
+node tools/nara-import/import.ts export.csv --server https://ned-baby.azurewebsites.net --user John
 ```
 
 Run the import in the baby's time zone (or set `TZ`), since that decides which sleeps count as night.

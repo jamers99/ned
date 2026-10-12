@@ -11,7 +11,7 @@ const at = (dayOfMonth: number, time: string) => {
 let next = 0;
 function event(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type' | 'Start'>): BabyEvent {
   return {
-    Guid: `e${next++}`, ModifiedAt: '', Deleted: false, LoggedBy: 'Alex', dirty: 0, End: null, IsNight: false,
+    Guid: `e${next++}`, ModifiedAt: '', Deleted: false, LoggedBy: 'John', dirty: 0, End: null, IsNight: false,
     SleepLocation: null, SleepOnset: null, WakeMood: null, SettledBy: null, FeedKind: null, LeftSeconds: 0,
     RightSeconds: 0, StartSide: null, ActiveSide: null, ActiveSince: null, BottleOz: null, Foods: [],
     SolidAmount: null, Text: '', ...fields

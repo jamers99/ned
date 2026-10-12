@@ -55,7 +55,7 @@ beforeEach(async () => {
   await db.delete();
   await db.open();
   await setMeta('refreshToken', 'first');
-  status.user = 'Alex';
+  status.user = 'John';
   status.needsSignIn = false;
   server = new FakeServer();
   vi.stubGlobal('fetch', server.fetch);
@@ -81,18 +81,18 @@ describe('sync', () => {
     await db.events.bulkAdd([{ ...shared, dirty: 1 }, { ...mine, dirty: 1 }]);
     await syncNow();
 
-    server.save(shared.Guid, { Deleted: true, LoggedBy: 'Sam' });
-    server.save(mine.Guid, { Text: 'from Sam' });
-    await db.events.update(mine.Guid, { Text: 'from Alex', dirty: 5 });
+    server.save(shared.Guid, { Deleted: true, LoggedBy: 'Jane' });
+    server.save(mine.Guid, { Text: 'from Jane' });
+    await db.events.update(mine.Guid, { Text: 'from John', dirty: 5 });
     server.onBatch = async () => {
       // Pull runs after push, so by now the local edit has been pushed and wins.
       expect((await db.events.get(mine.Guid))!.dirty).toBe(5);
     };
     await syncNow();
 
-    expect(await db.events.get(shared.Guid)).toMatchObject({ Deleted: true, LoggedBy: 'Sam', dirty: 0 });
-    expect(server.rows.get(mine.Guid)!.Text).toBe('from Alex');
-    expect(await db.events.get(mine.Guid)).toMatchObject({ Text: 'from Alex', dirty: 0 });
+    expect(await db.events.get(shared.Guid)).toMatchObject({ Deleted: true, LoggedBy: 'Jane', dirty: 0 });
+    expect(server.rows.get(mine.Guid)!.Text).toBe('from John');
+    expect(await db.events.get(mine.Guid)).toMatchObject({ Text: 'from John', dirty: 0 });
   });
 
   it('keeps a row dirty when it is edited again while its push is in flight', async () => {
