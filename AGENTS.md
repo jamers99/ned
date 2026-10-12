@@ -139,7 +139,7 @@ Input: `export_narababy_<name>_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)` 
 | Note column | `Text` | if present |
 | Diaper, Pump, Milestone, Profile | skip | |
 
-The duration, unit, food and growth column names vary, so they are matched by pattern in `tools/nara-import/nara.ts`. Run `--dry-run` first and check the counts and samples.
+Nara's columns carry a type prefix (`[Sleep] End Date/time (Epoch)`, `[Growth] Weight`, …); `tools/nara-import/nara.ts` names them exactly. Run `--dry-run` first and check the counts and samples.
 
 ## Build order
 

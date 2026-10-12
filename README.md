@@ -48,7 +48,7 @@ Export the CSV from Nara (Activity → tap the avatar → Export Data) and check
 node tools/nara-import/import.ts export.csv --dry-run
 ```
 
-If a count or sample looks off, adjust the `columns` map in `tools/nara-import/nara.ts`. Then import as one of the parents. Re-running is safe.
+If a count or sample looks off, Nara may have renamed a column: check the `columns` map in `tools/nara-import/nara.ts`. Then import as one of the parents. Re-running is safe.
 
 ```bash
 read -s NED_PASSWORD && export NED_PASSWORD
