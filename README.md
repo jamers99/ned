@@ -41,18 +41,29 @@ The server tests recreate a `ned_tests` database on each run.
 
 ## Deploy
 
-Serve the server over HTTPS on one origin (the service worker and `crypto.subtle` need a secure context).
-Run `npm run build` in `client/` first: it writes the app into `server/Ned.API/wwwroot`.
-Configure secrets with environment variables:
+Ned runs on Azure App Service's free Linux plan (`ned-baby` in resource group `rg-ned`, on James's personal
+subscription) with a free [Neon](https://neon.tech) Postgres database. To ship a new version, sign in with
+`az login` and run:
 
-| Variable | Value |
-|---|---|
-| `Tenants__Ned__ConnectionString` | PostgreSQL connection string |
-| `Tenants__Ned__EncryptionKey` | 64 hex characters (`openssl rand -hex 32`). Signs tokens; keep it stable |
-| `Tenants__Ned__AdminPassword` | Required. Core creates an `admin` account on first start |
-| `Parents__Natalie`, `Parents__James` | Each parent's password (8+ characters, upper, lower, digit, symbol) |
+```bash
+./deploy.sh
+```
 
-The parents are created once, on the first start against an empty database.
+The first time, `./deploy.sh --setup` creates the Azure resources and asks for three things:
+- the Neon connection string (the direct one, with pooling off);
+- each parent's password (8+ characters with upper, lower, digit and symbol).
+
+It also generates the token key and the admin password. The parents are created on the first start against the
+empty database. The secrets live in the app's settings as `Tenants__Ned__ConnectionString`,
+`Tenants__Ned__EncryptionKey`, `Tenants__Ned__AdminPassword` and `Parents__<Name>`. Keep the token key
+stable: changing it signs both phones out.
+
+The free plan sleeps when idle, so the first sync after a quiet spell takes a few seconds. The app never waits on
+it. To keep it awake, for about $13 a month:
+
+```bash
+az appservice plan update --resource-group rg-ned --name plan-ned --sku B1
+```
 
 On each phone, open the site in Safari or Chrome, choose **Add to Home Screen**, and sign in from the
 installed app. On iPhone, the home-screen app has its own storage, separate from Safari.
@@ -78,7 +89,7 @@ read -s NED_PASSWORD && export NED_PASSWORD
 ```
 
 ```bash
-node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://baby.example.com --user James
+node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://ned-baby.azurewebsites.net --user James
 ```
 
 The "night" flag on imported sleeps uses the importing computer's time zone, so run it in the family's

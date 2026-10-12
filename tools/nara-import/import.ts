@@ -3,7 +3,7 @@
 //
 //   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --dry-run
 //   read -s NED_PASSWORD; export NED_PASSWORD
-//   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://baby.example.com --user James
+//   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://ned-baby.azurewebsites.net --user James
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import type { SyncedTable } from '../../client/src/lib/db.ts';
