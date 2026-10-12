@@ -51,12 +51,12 @@
           <strong class="serif">{duration(timeline.sleepTotal)}</strong>
         </div>
         <div class="total">
-          <span>Naps</span>
-          <strong class="serif">{timeline.napCount} · {duration(timeline.napTotal)}</strong>
+          <span>{timeline.napCount} {timeline.napCount === 1 ? 'nap' : 'naps'}</span>
+          <strong class="serif">{duration(timeline.napTotal)}</strong>
         </div>
         <div class="total">
-          <span>Feeds</span>
-          <strong class="serif">{timeline.feedCount} · {duration(timeline.nursingTotal)}</strong>
+          <span>{timeline.feedCount} {timeline.feedCount === 1 ? 'feed' : 'feeds'}</span>
+          <strong class="serif">{duration(timeline.nursingTotal)}</strong>
         </div>
       </div>
 
@@ -115,14 +115,14 @@
   .totals {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
   }
 
   .total {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 18px;
-    padding: 10px 14px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -135,9 +135,11 @@
   }
 
   .total strong {
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 600;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .rows {
