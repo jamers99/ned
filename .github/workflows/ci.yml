@@ -1,6 +1,8 @@
 name: CI
 
 # Pull requests run the tests. A push to main runs them too and, if they pass, deploys.
+# The database is Neon Postgres: https://console.neon.tech/app/org-wandering-rain-03820999/
+# Its connection string lives in the app's settings on Azure (set by setup.sh), not in GitHub.
 on:
   push:
     branches: [main]
