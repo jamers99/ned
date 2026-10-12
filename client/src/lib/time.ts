@@ -97,6 +97,14 @@ export function toDateInput(ms: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Keeps the local time of `ms` and applies the "YYYY-MM-DD" from a date input. */
+export function withDateInput(ms: number, value: string): number {
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(ms);
+  date.setFullYear(y, m - 1, d);
+  return date.getTime();
+}
+
 export function fromDateInput(value: string): number {
   const [y, m, d] = value.split('-').map(Number);
   return new Date(y, m - 1, d).getTime();

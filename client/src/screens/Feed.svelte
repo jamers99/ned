@@ -267,19 +267,6 @@
     flex-wrap: wrap;
   }
 
-  .adjust :global(.pill),
-  .pill {
-    min-height: 44px;
-    padding: 0 16px;
-    border-radius: 22px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    font-size: 14px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-  }
-
   .stepper {
     display: flex;
     align-items: center;

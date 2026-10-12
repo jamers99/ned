@@ -5,7 +5,8 @@
   import { db, type BabyEvent, type SettledBy, type Side, type SleepLocation, type SleepOnset, type SolidAmount,
     type WakeMood } from '../lib/db.ts';
   import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
-  import { close } from '../lib/nav.svelte.ts';
+  import { close, nav } from '../lib/nav.svelte.ts';
+  import { dayOf } from '../lib/sleep.ts';
   import { live } from '../lib/state.svelte.ts';
   import { clock as clockTime, day, duration, endAfter, mediumDate } from '../lib/time.ts';
 
@@ -26,7 +27,22 @@
 
   function setStart(start: number) {
     if (!e) return;
-    set({ Start: e.End != null && start > e.End ? start - day : start });
+    // A sleep or waking keeps its end, so its start lands before it. A feed, solids or note moves whole.
+    if (e.Type === 'Sleep' || e.Type === 'NightWaking') set({ Start: start > (e.End ?? Date.now()) ? start - day : start });
+    else moveTo(start);
+  }
+
+  /** Moves the whole entry, keeping its length. */
+  function moveTo(start: number) {
+    if (!e) return;
+    set({ Start: start, End: e.End == null ? null : e.End + (start - e.Start) });
+  }
+
+  function setDate(start: number) {
+    if (!e) return;
+    moveTo(start);
+    // The Day tab behind the sheet follows it, so it doesn't seem to vanish.
+    nav.day = dayOf({ ...e, Start: start });
   }
 
   function setEnd(end: number) {
@@ -66,10 +82,13 @@
 <Sheet>
   {#if e}
     <div class="heading">
-      <div class="screen-title">
-        {e.Type === 'Sleep' ? (e.IsNight ? 'Night' : 'Nap') : e.FeedKind === 'Bottle' ? 'Bottle' : titles[e.Type]}
+      <div>
+        <div class="screen-title">
+          {e.Type === 'Sleep' ? (e.IsNight ? 'Night' : 'Nap') : e.FeedKind === 'Bottle' ? 'Bottle' : titles[e.Type]}
+        </div>
+        {#if e.LoggedBy}<div class="by">Logged by {e.LoggedBy}</div>{/if}
       </div>
-      <div class="date">{mediumDate(e.Start)}{e.LoggedBy ? ` · ${e.LoggedBy}` : ''}</div>
+      <TimeInput type="date" class="pill" value={e.Start} onchange={setDate} label="Date">{mediumDate(e.Start)}</TimeInput>
     </div>
 
     <div class="times">
@@ -130,10 +149,11 @@
   .heading {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    gap: 12px;
   }
 
-  .date {
+  .by {
     font-size: 13px;
     font-weight: 700;
     color: var(--muted);
