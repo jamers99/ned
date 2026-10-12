@@ -1,4 +1,4 @@
-# Kennedy
+# Ned
 
 A private, sleep-first baby tracker for two parents. An offline-first PWA (`client/`) syncs through a
 Benevia Core API (`server/`), which also serves the app. See [CLAUDE.md](CLAUDE.md) for the product spec
@@ -14,10 +14,10 @@ cd client && npm install && npm run build
 ```
 
 ```bash
-cd server && dotnet run --project Kennedy.API --launch-profile http
+cd server && dotnet run --project Ned.API --launch-profile http
 ```
 
-Open http://localhost:5205. The first start creates the `kennedy` database and two parents from
+Open http://localhost:5205. The first start creates the `ned` database and two parents from
 `appsettings.Development.json`: `Natalie` / `Dev-natalie-1` and `James` / `Dev-james-1`.
 
 For client work with hot reload, run `npm run dev` in `client/` and open http://localhost:5173. It proxies
@@ -26,7 +26,7 @@ For client work with hot reload, run `npm run dev` in `client/` and open http://
 ## Tests
 
 ```bash
-cd server && dotnet test Kennedy.slnx
+cd server && dotnet test Ned.slnx
 ```
 
 ```bash
@@ -37,19 +37,19 @@ cd client && npm run check && npm test
 node --test tools/nara-import/nara.test.ts
 ```
 
-The server tests recreate a `kennedy_tests` database on each run.
+The server tests recreate a `ned_tests` database on each run.
 
 ## Deploy
 
 Serve the server over HTTPS on one origin (the service worker and `crypto.subtle` need a secure context).
-Run `npm run build` in `client/` first: it writes the app into `server/Kennedy.API/wwwroot`.
+Run `npm run build` in `client/` first: it writes the app into `server/Ned.API/wwwroot`.
 Configure secrets with environment variables:
 
 | Variable | Value |
 |---|---|
-| `Tenants__Kennedy__ConnectionString` | PostgreSQL connection string |
-| `Tenants__Kennedy__EncryptionKey` | 64 hex characters (`openssl rand -hex 32`). Signs tokens; keep it stable |
-| `Tenants__Kennedy__AdminPassword` | Required. Core creates an `admin` account on first start |
+| `Tenants__Ned__ConnectionString` | PostgreSQL connection string |
+| `Tenants__Ned__EncryptionKey` | 64 hex characters (`openssl rand -hex 32`). Signs tokens; keep it stable |
+| `Tenants__Ned__AdminPassword` | Required. Core creates an `admin` account on first start |
 | `Parents__Natalie`, `Parents__James` | Each parent's password (8+ characters, upper, lower, digit, symbol) |
 
 The parents are created once, on the first start against an empty database.
@@ -74,7 +74,7 @@ are matched by pattern in `tools/nara-import/nara.ts`. If a count or sample look
 Then import. Re-running is safe: each row's `Guid` comes from its Nara key.
 
 ```bash
-read -s KENNEDY_PASSWORD && export KENNEDY_PASSWORD
+read -s NED_PASSWORD && export NED_PASSWORD
 ```
 
 ```bash

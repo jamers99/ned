@@ -1,5 +1,5 @@
 // A log of errors on the phone, shown in Settings. It lives in sessionStorage so it survives a reload.
-const logKey = 'kennedy-diagnostics';
+const logKey = 'ned-diagnostics';
 const maxEntries = 40;
 
 export const diagnostics = $state({ log: restore() as { at: number; message: string }[] });

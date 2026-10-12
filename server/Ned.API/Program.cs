@@ -5,22 +5,22 @@ using Benevia.Core.DataGenerator;
 using Benevia.Core.Events;
 using Benevia.Core.Postgres;
 using Benevia.Core.Postgres.Model;
-using Kennedy.API;
+using Ned.API;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Core creates the admin account on first start and falls back to a well-known password.
-if (!builder.Environment.IsDevelopment() && string.IsNullOrEmpty(builder.Configuration["Tenants:Kennedy:AdminPassword"]))
-    throw new InvalidOperationException("Set Tenants:Kennedy:AdminPassword before the first start.");
+if (!builder.Environment.IsDevelopment() && string.IsNullOrEmpty(builder.Configuration["Tenants:Ned:AdminPassword"]))
+    throw new InvalidOperationException("Set Tenants:Ned:AdminPassword before the first start.");
 
 builder.Services
     .AddCorePostgres()
     .AddCoreDataGeneration()
-    .AddKennedyAPIModel()
-    .AddKennedyAPIDataTypesLogic()
-    .AddKennedyAPIBL()
-    .AddKennedyAPIEndpoints()
+    .AddNedAPIModel()
+    .AddNedAPIDataTypesLogic()
+    .AddNedAPIBL()
+    .AddNedAPIEndpoints()
     .AddCoreApiEvents(
         (o, tenant) => o.UseNpgsql(tenant?.ConnectionString),
         apiOptions: o => o.MaxODataBatchParts = 200,

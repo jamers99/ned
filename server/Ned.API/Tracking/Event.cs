@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using Kennedy.API.Sync;
+using Ned.API.Sync;
 using Microsoft.EntityFrameworkCore;
 
-namespace Kennedy.API.Tracking;
+namespace Ned.API.Tracking;
 
 [ApiEntity]
 [Index(nameof(ModifiedAt))]

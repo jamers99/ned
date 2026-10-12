@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using Kennedy.API.Sync;
+using Ned.API.Sync;
 
-namespace Kennedy.API.Tracking;
+namespace Ned.API.Tracking;
 
 /// <summary>
 /// Sleep targets shared by both phones. There is one row, with a fixed <c>Guid</c> that both phones use.

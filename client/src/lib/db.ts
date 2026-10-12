@@ -73,7 +73,7 @@ export interface Meta {
 
 // No query cache: live queries read IndexedDB directly. With the cache on, a read interrupted while Android
 // had the app suspended could leave a cached query that never settles, freezing every screen until a restart.
-export const db = new Dexie('kennedy', { cache: 'disabled' }) as Dexie & {
+export const db = new Dexie('ned', { cache: 'disabled' }) as Dexie & {
   events: EntityTable<BabyEvent, 'Guid'>;
   growth: EntityTable<Growth, 'Guid'>;
   foods: EntityTable<Food, 'Guid'>;

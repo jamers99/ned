@@ -1,7 +1,7 @@
 import { db, getMeta, setMeta, syncedTables } from './db.ts';
 import { status } from './state.svelte.ts';
 
-const tenantId = 'Kennedy';
+const tenantId = 'Ned';
 // Android can leave a request hanging while the app is in the background; give up rather than wait.
 const authTimeout = 15_000;
 

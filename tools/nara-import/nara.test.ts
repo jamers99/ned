@@ -8,7 +8,7 @@ import { mapRows, parseCsv } from './nara.ts';
 
 const sample = await readFile(new URL('./fixtures/export_narababy_sample.csv', import.meta.url), 'utf8');
 
-test('maps each Nara type and skips the ones Kennedy does not track', async () => {
+test('maps each Nara type and skips the ones Ned does not track', async () => {
   const imported = await mapRows(parseCsv(sample));
 
   assert.deepEqual(imported.counts, { Breastfeed: 1, 'Bottle Feed': 1, 'Solid Feed': 1, Sleep: 2, Growth: 1 });

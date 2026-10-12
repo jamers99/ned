@@ -13,8 +13,8 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Kennedy',
-        short_name: 'Kennedy',
+        name: 'Ned – Baby Tracker',
+        short_name: 'Ned – Baby Tracker',
         description: 'Sleep-first baby tracker',
         display: 'standalone',
         orientation: 'portrait',
@@ -34,7 +34,7 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: '../server/Kennedy.API/wwwroot',
+    outDir: '../server/Ned.API/wwwroot',
     emptyOutDir: true
   },
   server: {

@@ -1,7 +1,7 @@
 using Benevia.Core.Events.DataTypes.Attributes;
-using Kennedy.API.Sync;
+using Ned.API.Sync;
 
-namespace Kennedy.API.Tracking;
+namespace Ned.API.Tracking;
 
 [ApiEntity]
 public partial class Growth : ISynced

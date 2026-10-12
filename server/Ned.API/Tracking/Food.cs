@@ -1,7 +1,7 @@
 using System.ComponentModel;
-using Kennedy.API.Sync;
+using Ned.API.Sync;
 
-namespace Kennedy.API.Tracking;
+namespace Ned.API.Tracking;
 
 /// <summary>
 /// A food Kennedy has tried. Phones derive the <c>Guid</c> from the lower-cased name, so both phones adding

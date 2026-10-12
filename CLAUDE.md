@@ -1,4 +1,4 @@
-# Kennedy — sleep-first baby tracker
+# Ned — sleep-first baby tracker
 
 A private, two-parent baby tracker built around one goal: help Kennedy (born 2026-03-17) sleep well. Replaces the Nara Baby app. Two users: Natalie (iPhone, logs ~90% of entries) and James (Android).
 
@@ -12,7 +12,7 @@ A private, two-parent baby tracker built around one goal: help Kennedy (born 202
 
 ```
 /client   PWA — Vite + Svelte 5 + TypeScript, Dexie (IndexedDB), vite-plugin-pwa (Workbox)
-/server   Benevia Core API (.NET 10, PostgreSQL) — OData, entity events. Builds the client into Kennedy.API/wwwroot
+/server   Benevia Core API (.NET 10, PostgreSQL) — OData, entity events. Builds the client into Ned.API/wwwroot
 /tools    nara-import (one-time import of the Nara CSV export; reuses client/src/lib modules)
 ```
 

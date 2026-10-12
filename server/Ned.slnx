@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Ned.API/Ned.API.csproj" />
+  <Project Path="Ned.API.Tests/Ned.API.Tests.csproj" />
+</Solution>

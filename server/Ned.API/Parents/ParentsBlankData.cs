@@ -6,7 +6,7 @@ using Benevia.Core.DataGenerator.Attributes;
 using Benevia.Core.DataGenerator.Interfaces;
 using Microsoft.AspNetCore.Identity;
 
-namespace Kennedy.API.Parents;
+namespace Ned.API.Parents;
 
 /// <summary>
 /// Creates one user per parent from the <c>Parents</c> configuration section (user name → password),

@@ -1,6 +1,6 @@
 using Benevia.Core.Events.LogicBuilders;
 
-namespace Kennedy.API.Sync;
+namespace Ned.API.Sync;
 
 [Logic]
 public class SyncedBL(ISynced.Logic synced)

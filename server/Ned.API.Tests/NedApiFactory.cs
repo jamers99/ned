@@ -5,28 +5,28 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Npgsql;
 
-namespace Kennedy.API.Tests;
+namespace Ned.API.Tests;
 
 /// <summary>
 /// Runs the API against a throwaway PostgreSQL database that is recreated for each test run.
 /// </summary>
-public class KennedyApiFactory : WebApplicationFactory<Program>
+public class NedApiFactory : WebApplicationFactory<Program>
 {
-    const string ConnectionString = "Host=localhost;Database=kennedy_tests;Username=postgres;Password=postgres";
+    const string ConnectionString = "Host=localhost;Database=ned_tests;Username=postgres;Password=postgres";
 
-    public KennedyApiFactory()
+    public NedApiFactory()
     {
         var builder = new NpgsqlConnectionStringBuilder(ConnectionString) { Database = "postgres" };
         using var connection = new NpgsqlConnection(builder.ConnectionString);
         connection.Open();
-        using var drop = new NpgsqlCommand("DROP DATABASE IF EXISTS kennedy_tests WITH (FORCE)", connection);
+        using var drop = new NpgsqlCommand("DROP DATABASE IF EXISTS ned_tests WITH (FORCE)", connection);
         drop.ExecuteNonQuery();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        builder.UseSetting("Tenants:Kennedy:ConnectionString", ConnectionString);
+        builder.UseSetting("Tenants:Ned:ConnectionString", ConnectionString);
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public class KennedyApiFactory : WebApplicationFactory<Program>
     {
         var client = CreateClient();
         var response = await client.PostAsJsonAsync("/api/auth/signin",
-            new { TenantId = "Kennedy", Username = userName, Password = password },
+            new { TenantId = "Ned", Username = userName, Password = password },
             TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 

@@ -29,7 +29,7 @@
     {/if}
     <div class="brand">
       <Icon name="sprig" size={56} stroke="var(--moss)" width={1.3} />
-      <h1 class="serif">Kennedy</h1>
+      <h1 class="serif">Ned</h1>
       <p>Sign in once on this phone. Everything you log stays on the phone and syncs in the background.</p>
     </div>
 

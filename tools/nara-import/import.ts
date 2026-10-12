@@ -1,8 +1,8 @@
-// One-time import of a Nara Baby CSV export into Kennedy. Safe to re-run: every row gets a Guid derived
+// One-time import of a Nara Baby CSV export into Ned. Safe to re-run: every row gets a Guid derived
 // from its Nara key, and rows are upserted.
 //
 //   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --dry-run
-//   read -s KENNEDY_PASSWORD; export KENNEDY_PASSWORD
+//   read -s NED_PASSWORD; export NED_PASSWORD
 //   node tools/nara-import/import.ts export_narababy_kennedy_20261010.csv --server https://baby.example.com --user James
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
@@ -44,16 +44,16 @@ console.log('Sample growth:', imported.growth[0]);
 
 if (options['dry-run']) process.exit(0);
 
-const password = process.env.KENNEDY_PASSWORD;
+const password = process.env.NED_PASSWORD;
 if (!password) {
-  console.error('Set KENNEDY_PASSWORD to the password for --user.');
+  console.error('Set NED_PASSWORD to the password for --user.');
   process.exit(1);
 }
 
 const signIn = await fetch(`${options.server}/api/auth/signin`, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ TenantId: 'Kennedy', Username: options.user, Password: password })
+  body: JSON.stringify({ TenantId: 'Ned', Username: options.user, Password: password })
 });
 if (!signIn.ok) throw new Error(`Sign-in failed: ${await signIn.text()}`);
 const { accessToken } = await signIn.json();

@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="Kennedy.API/Kennedy.API.csproj" />
-  <Project Path="Kennedy.API.Tests/Kennedy.API.Tests.csproj" />
-</Solution>

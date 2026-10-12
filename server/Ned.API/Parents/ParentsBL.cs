@@ -1,7 +1,7 @@
 using Benevia.Core.Permissions;
-using Kennedy.API.Tracking;
+using Ned.API.Tracking;
 
-namespace Kennedy.API.Parents;
+namespace Ned.API.Parents;
 
 [Logic]
 public class ParentsBL(IResponsibilityRegistry access)

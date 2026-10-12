@@ -2,13 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
-namespace Kennedy.API.Tests.Sync;
+namespace Ned.API.Tests.Sync;
 
 /// <summary>
 /// Exercises the API the way the phones' sync engine does: push upserts in a <c>$batch</c>
 /// (PATCH first, POST the ones that 404), then pull everything modified since a cursor.
 /// </summary>
-public class SyncTests(KennedyApiFactory api) : IClassFixture<KennedyApiFactory>
+public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
 {
     const string EventFields = "Guid,Type,Start,End,IsNight,SleepLocation,ModifiedAt,Deleted,LoggedBy";
     readonly CancellationToken cancel = TestContext.Current.CancellationToken;

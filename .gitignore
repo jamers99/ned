@@ -10,7 +10,7 @@ dist/
 .vite/
 
 # Client build output copied into the server
-server/Kennedy.API/wwwroot/
+server/Ned.API/wwwroot/
 
 # Local data
 *.csv

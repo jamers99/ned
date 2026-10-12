@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Kennedy.API.Tests" />
+    <InternalsVisibleTo Include="Ned.API.Tests" />
   </ItemGroup>
 
   <ItemGroup>

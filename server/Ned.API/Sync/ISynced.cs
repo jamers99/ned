@@ -1,4 +1,4 @@
-namespace Kennedy.API.Sync;
+namespace Ned.API.Sync;
 
 /// <summary>
 /// A record that both phones keep a copy of. Phones generate the <c>Guid</c>, write locally first, and push

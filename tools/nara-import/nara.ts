@@ -1,4 +1,4 @@
-// Maps a Nara Baby CSV export to Kennedy rows. Pure functions, so they can be tested without a server.
+// Maps a Nara Baby CSV export to Ned rows. Pure functions, so they can be tested without a server.
 import type { BabyEvent, Food, Growth, SolidAmount } from '../../client/src/lib/db.ts';
 import { foodGuid, uuidV5 } from '../../client/src/lib/ids.ts';
 import { presetCategory } from '../../client/src/lib/foods.ts';
