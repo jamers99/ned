@@ -17,7 +17,8 @@ if [[ ${1:-} == --setup ]]; then
   az webapp create "${target[@]}" --plan plan-ned --name $app --runtime DOTNETCORE:10.0 --https-only true --output none
   az webapp config set "${target[@]}" --name $app --startup-file 'dotnet Ned.API.dll' --output none
 
-  read -rsp 'Neon connection string: ' database && echo
+  database=
+  until [[ $database =~ ^(postgres|Host=) ]]; do read -rsp 'Neon connection string: ' database && echo; done
   # Neon hands out a postgresql:// URL; Npgsql wants key=value pairs.
   if [[ $database =~ ^postgres(ql)?://([^:]+):([^@]+)@([^/?]+)/([^?]+) ]]; then
     database="Host=${BASH_REMATCH[4]};Database=${BASH_REMATCH[5]};Username=${BASH_REMATCH[2]};Password=${BASH_REMATCH[3]};SSL Mode=Require"
@@ -29,7 +30,10 @@ if [[ ${1:-} == --setup ]]; then
   )
   read -rp 'Parent names, separated by spaces: ' -a parents
   for parent in "${parents[@]}"; do
-    read -rsp "Password for $parent: " password && echo
+    while read -rsp "Password for $parent: " password && echo; do
+      [[ ${#password} -ge 8 && $password =~ [A-Z] && $password =~ [a-z] && $password =~ [0-9] && $password =~ [^A-Za-z0-9] ]] && break
+      echo 'It needs 8+ characters with an upper-case letter, a lower-case letter, a digit and a symbol.'
+    done
     settings+=("Parents__$parent=$password")
   done
   az webapp config appsettings set "${target[@]}" --name $app --output none --settings "${settings[@]}"

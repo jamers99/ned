@@ -42,6 +42,10 @@ public class ParentsBlankData : ICreateData
 
     static User CreateUser(UserManager<User> userManager, string userName, string password)
     {
+        // A first start that failed part-way (say, on the second parent's password) may have saved the first parent.
+        if (userManager.FindByNameAsync(userName).GetAwaiter().GetResult() is { } existing)
+            return existing;
+
         var user = new User { UserName = userName, FirstName = userName, HasFullAccess = false };
         var result = userManager.CreateAsync(user, password).GetAwaiter().GetResult();
         if (!result.Succeeded)
