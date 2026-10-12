@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { nav, type Tab } from '../lib/nav.svelte.ts';
-  import { startOfDay } from '../lib/time.ts';
+  import { nav, showTab, type Tab } from '../lib/nav.svelte.ts';
   import Icon, { type IconName } from './Icon.svelte';
 
   let { dark = false }: { dark?: boolean } = $props();
@@ -10,18 +9,12 @@
     { tab: 'day', label: 'Day', icon: 'list' },
     { tab: 'insights', label: 'Insights', icon: 'bars' }
   ];
-
-  function select(tab: Tab) {
-    if (tab === 'day' && nav.tab !== 'day') nav.day = startOfDay(Date.now());
-    nav.tab = tab;
-    scrollTo(0, 0);
-  }
 </script>
 
 <nav class:dark>
   {#each tabs as { tab, label, icon } (tab)}
     <button class:active={nav.tab === tab} aria-current={nav.tab === tab ? 'page' : undefined}
-      onclick={() => select(tab)}>
+      onclick={() => showTab(tab)}>
       <Icon name={icon} width={nav.tab === tab ? 2 : 1.7} />
       {label}
     </button>

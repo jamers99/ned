@@ -4,7 +4,7 @@
   import { startSleep } from '../lib/actions.ts';
   import type { BabyEvent } from '../lib/db.ts';
   import { appear } from '../lib/motion.ts';
-  import { open } from '../lib/nav.svelte.ts';
+  import { open, showTab } from '../lib/nav.svelte.ts';
   import { isNightTime, latestRunning, nextSleep, type SleepTargets } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
   import { clockShort, clock as clockTime, duration, longDate, minute, stopwatch } from '../lib/time.ts';
@@ -22,6 +22,16 @@
   const feedSeconds = $derived(feeding
     ? feeding.LeftSeconds + feeding.RightSeconds + (feeding.ActiveSince ? (now - feeding.ActiveSince) / 1000 : 0)
     : 0);
+
+  // The last finished feed, timed from when it started, like the gap between feeds is usually counted.
+  const lastFeed = $derived(events.filter(e => e.Type === 'Feed' && e.End != null).at(-1));
+  const lastFeedAgo = $derived(lastFeed ? now - lastFeed.Start : 0);
+
+  function feedDetail(feed: BabyEvent): string {
+    if (feed.FeedKind === 'Bottle') return `${feed.BottleOz ?? 0} oz bottle`;
+    const seconds = feed.LeftSeconds + feed.RightSeconds;
+    return seconds ? `nursed ${duration(seconds * 1000)}` : 'nursed';
+  }
 </script>
 
 {#if sleeping}
@@ -84,6 +94,17 @@
         Note
       </button>
     </div>
+
+    {#if lastFeed}
+      <button class="card last-feed" onclick={() => showTab('day')}>
+        <Icon name="drop" stroke="var(--terra-text)" />
+        <span class="last-feed-text">
+          <span class="last-feed-ago serif">Fed {lastFeedAgo < minute ? 'just now' : `${duration(lastFeedAgo)} ago`}</span>
+          <span class="last-feed-meta">{clockTime(lastFeed.Start)} · {feedDetail(lastFeed)}</span>
+        </span>
+        <Icon name="right" size={18} stroke="var(--muted)" />
+      </button>
+    {/if}
 
     <TodayStrip {events} {now} />
   </div>
@@ -223,5 +244,33 @@
   .tile.running {
     border-color: var(--terra);
     color: var(--terra-text);
+  }
+
+  .last-feed {
+    min-height: 60px;
+    padding: 10px 16px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .last-feed-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .last-feed-ago {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .last-feed-meta {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
   }
 </style>

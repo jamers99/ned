@@ -19,6 +19,13 @@ export const nav = $state<{ tab: Tab; overlay: Overlay | null; day: number }>({
   day: startOfDay(Date.now())
 });
 
+/** Switches tabs. The Day tab always opens on today. */
+export function showTab(tab: Tab) {
+  if (tab === 'day' && nav.tab !== 'day') nav.day = startOfDay(Date.now());
+  nav.tab = tab;
+  scrollTo(0, 0);
+}
+
 // Overlays sit on one history entry, so the Android back gesture closes them.
 export function open(overlay: Overlay) {
   if (nav.overlay) history.replaceState({ overlay: true }, '');
