@@ -7,7 +7,6 @@ Ned is built for one family and one baby, so there's no sign-up: the parents are
 ## Run it locally
 
 You need the .NET 10 SDK, Node 24+ and PostgreSQL on `localhost` (user `postgres`, password `postgres`).
-Benevia Core comes from the private GitHub package feed; see Core's quick start for adding the source.
 
 ```bash
 cd client && npm install && npm run build
@@ -41,38 +40,32 @@ The server tests recreate a `ned_tests` database on each run.
 
 ## Deploy
 
-Ned runs on Azure App Service's free Linux plan (`ned-baby` in resource group `rg-ned`) with a free
-[Neon](https://neon.tech) Postgres database. Every push to `main` deploys (see below). To ship from your own
-machine instead, sign in with `az login` and run:
+Ned runs on Azure App Service (`ned-baby` in resource group `rg-ned`) with a [Neon](https://neon.tech) Postgres
+database. GitHub Actions runs the tests on every pull request and push, and every push to `main` that passes is
+deployed with `./deploy.sh`. To deploy from your own machine, sign in with `az login` and run it yourself.
 
-```bash
-./deploy.sh
-```
-
-The first time, `./deploy.sh --setup` confirms the subscription, creates the Azure resources, and asks for:
-- the Neon connection string (the direct one, with pooling off);
+The first time, sign in with `az login` and `gh auth login` and run `./setup.sh`. It confirms the subscription,
+creates the Azure resources, and asks for:
+- the Neon connection string (the .NET one);
 - the parents' names, and a password for each (8+ characters with upper, lower, digit and symbol).
 
-It also generates the token key and the admin password, and lets GitHub Actions deploy (see below). The parents are created on the first start against the
-empty database. The secrets live in the app's settings as `Tenants__Ned__ConnectionString`,
-`Tenants__Ned__EncryptionKey`, `Tenants__Ned__AdminPassword` and `Parents__<Name>`. Keep the token key
-stable: changing it signs both phones out.
+It also does three more things:
+- generates the token key and the admin password;
+- creates an identity that only `main` can sign in as, so GitHub Actions can deploy. It signs in through OIDC, so no
+  Azure secret is stored in GitHub;
+- deploys.
 
-The free plan sleeps when idle, so the first sync after a quiet spell takes a few seconds. The app never waits on
-it. To keep it awake, for about $13 a month:
+The parents are created on the first start. The secrets live in the app's settings as
+`Tenants__Ned__ConnectionString`, `Tenants__Ned__EncryptionKey`, `Tenants__Ned__AdminPassword` and
+`Parents__<Name>`. Keep the token key stable: changing it signs both phones out.
+
+The free plan (F1) sleeps when idle, so the first sync after a quiet spell takes a few seconds. The app never waits
+on it. If the app crashes repeatedly, the free plan stops it until its quota resets. B1 stays awake, for about $13 a
+month:
 
 ```bash
 az appservice plan update --resource-group rg-ned --name plan-ned --sku B1
 ```
-
-### GitHub Actions
-
-`.github/workflows/ci.yml` runs the client, import and server tests on every pull request and push. On a push to
-`main`, it then runs `./deploy.sh`. Two things set it up:
-- A `NUGET_TOKEN` secret, so it can download Benevia Core: a classic GitHub token with only the `read:packages`
-  scope (`gh secret set NUGET_TOKEN`).
-- `--setup`, which creates a managed identity that only `main` can sign in as (through OIDC, so no Azure secret
-  is stored in GitHub). It saves the identity's IDs as repository variables. Until then, the deploy job is skipped.
 
 ### Phones
 

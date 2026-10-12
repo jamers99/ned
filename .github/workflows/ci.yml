@@ -1,18 +1,20 @@
 name: CI
 
-# Pull requests run the tests. A push to main runs them again and, once they pass, deploys.
+# Pull requests run the tests. A push to main runs them too and, if they pass, deploys.
 on:
   push:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: read
+concurrency: ${{ github.ref }}
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # to sign in to Azure; only main is trusted there
     services:
       postgres:
         image: postgres:17
@@ -30,48 +32,19 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - name: Add the Benevia Core package feed
-        env:
-          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
-        run: dotnet nuget add source https://nuget.pkg.github.com/beneviasoftware/index.json --name benevia --username ${{ github.repository_owner }} --password "$NUGET_TOKEN" --store-password-in-clear-text
-      - name: Client
+      - name: Client tests
         working-directory: client
-        run: |
-          npm ci
-          npm run check
-          npm test
-      - name: Nara import
+        run: npm ci && npm run check && npm test
+      - name: Import tests
         run: node --test tools/nara-import/nara.test.ts
-      - name: Server
+      - name: Server tests
         run: dotnet test server/Ned.slnx
 
-  deploy:
-    name: Deploy
-    needs: test
-    # Skipped until `./deploy.sh --setup` has stored the Azure sign-in details.
-    if: github.event_name == 'push' && vars.AZURE_CLIENT_ID != ''
-    runs-on: ubuntu-latest
-    concurrency: deploy
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-      - name: Add the Benevia Core package feed
-        env:
-          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
-        run: dotnet nuget add source https://nuget.pkg.github.com/beneviasoftware/index.json --name benevia --username ${{ github.repository_owner }} --password "$NUGET_TOKEN" --store-password-in-clear-text
-      - uses: azure/login@v3
+      - if: github.event_name == 'push'
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      - run: ./deploy.sh
+      - if: github.event_name == 'push'
+        run: ./deploy.sh
