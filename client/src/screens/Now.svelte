@@ -23,13 +23,14 @@
     ? feeding.LeftSeconds + feeding.RightSeconds + (feeding.ActiveSince ? (now - feeding.ActiveSince) / 1000 : 0)
     : 0);
 
-  // The last finished feed, timed from when it started, like the gap between feeds is usually counted.
-  const lastFeed = $derived(events.filter(e => e.Type === 'Feed' && e.End != null).at(-1));
-  const lastFeedAgo = $derived(lastFeed ? now - lastFeed.Start : 0);
+  // The last finished feed or solids, timed from when it started, like the gap between feeds is usually counted.
+  const lastMeal = $derived(events.filter(e => (e.Type === 'Feed' || e.Type === 'Solids') && e.End != null).at(-1));
+  const lastMealAgo = $derived(lastMeal ? now - lastMeal.Start : 0);
 
-  function feedDetail(feed: BabyEvent): string {
-    if (feed.FeedKind === 'Bottle') return `${feed.BottleOz ?? 0} oz bottle`;
-    const seconds = feed.LeftSeconds + feed.RightSeconds;
+  function mealDetail(meal: BabyEvent): string {
+    if (meal.Type === 'Solids') return meal.Foods.join(', ') || 'solids';
+    if (meal.FeedKind === 'Bottle') return `${meal.BottleOz ?? 0} oz bottle`;
+    const seconds = meal.LeftSeconds + meal.RightSeconds;
     return seconds ? `nursed ${duration(seconds * 1000)}` : 'nursed';
   }
 </script>
@@ -95,12 +96,14 @@
       </button>
     </div>
 
-    {#if lastFeed}
-      <button class="card last-feed" onclick={() => showTab('day')}>
-        <Icon name="drop" stroke="var(--terra-text)" />
-        <span class="last-feed-text">
-          <span class="last-feed-ago serif">Fed {lastFeedAgo < minute ? 'just now' : `${duration(lastFeedAgo)} ago`}</span>
-          <span class="last-feed-meta">{clockTime(lastFeed.Start)} · {feedDetail(lastFeed)}</span>
+    {#if lastMeal}
+      <button class="card last-meal" onclick={() => showTab('day')}>
+        <Icon name={lastMeal.Type === 'Solids' ? 'bowl' : 'drop'} stroke="var(--terra-text)" />
+        <span class="last-meal-text">
+          <span class="last-meal-ago serif">
+            {lastMeal.Type === 'Solids' ? 'Ate' : 'Fed'} {lastMealAgo < minute ? 'just now' : `${duration(lastMealAgo)} ago`}
+          </span>
+          <span class="last-meal-meta">{clockTime(lastMeal.Start)} · {mealDetail(lastMeal)}</span>
         </span>
         <Icon name="right" size={18} stroke="var(--muted)" />
       </button>
@@ -246,7 +249,7 @@
     color: var(--terra-text);
   }
 
-  .last-feed {
+  .last-meal {
     min-height: 60px;
     padding: 10px 16px;
     border-radius: 22px;
@@ -256,21 +259,25 @@
     text-align: left;
   }
 
-  .last-feed-text {
+  .last-meal-text {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 1px;
   }
 
-  .last-feed-ago {
+  .last-meal-ago {
     font-size: 18px;
     font-weight: 600;
   }
 
-  .last-feed-meta {
+  .last-meal-meta {
     font-size: 13px;
     font-weight: 700;
     color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>
