@@ -1,11 +1,8 @@
 # Ned
 
-A calm, sleep-first baby tracker for two parents, built to be used one-handed at 3am. An offline-first PWA
-(`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap lands on the
-phone first; the server is only for sync and backup. See [CLAUDE.md](CLAUDE.md) for the product spec and the
-sync design.
+A calm baby app focusing on sleep and simplicity. An offline-first PWA (`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap is local first; the server is only for sync and backup. See [CLAUDE.md](CLAUDE.md) for the product spec and the sync design.
 
-Ned is built for one family and one baby, so there's no sign-up: the parents are set in configuration.
+Ned is built for one family and one baby, so there's no sign-up: the parents are set in configuration. We'll get to sign up and multi-child support eventually.
 
 ## Run it locally
 
