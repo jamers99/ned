@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
+  import TimeInput from '../components/TimeInput.svelte';
   import { addSolids } from '../lib/actions.ts';
   import { db, type Food, type FoodCategory, type SolidAmount } from '../lib/db.ts';
   import { foodPresets, presetCategory } from '../lib/foods.ts';
@@ -7,7 +8,7 @@
   import { pop } from '../lib/motion.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
-  import { clock as clockTime } from '../lib/time.ts';
+  import { clock as clockTime, day } from '../lib/time.ts';
 
   const known = live(() => db.foods.toArray(), [] as Food[]);
   const foods = $derived(known.value.filter(f => !f.Deleted).sort((a, b) => (b.LastUsedAt ?? 0) - (a.LastUsedAt ?? 0)));
@@ -16,6 +17,9 @@
   let tab = $state<keyof typeof foodPresets>('Fruit');
   let selected = $state<string[]>([]);
   let amount = $state<SolidAmount | null>(null);
+  // Follows the clock until a time is picked; a time later than now means yesterday.
+  let picked = $state<number | null>(null);
+  const at = $derived(picked ?? clock.now);
 
   const tabs = Object.keys(foodPresets) as (keyof typeof foodPresets)[];
   const amounts: [SolidAmount, string][] = [['Taste', 'A taste'], ['Some', 'Some'], ['All', 'All of it']];
@@ -48,7 +52,7 @@
 
   function save() {
     if (selected.length === 0) return;
-    void addSolids(selected.map(name => ({ name, category: categoryOf(name) })), amount);
+    void addSolids(selected.map(name => ({ name, category: categoryOf(name) })), amount, at);
     close();
   }
 </script>
@@ -60,10 +64,6 @@
 {/snippet}
 
 <Overlay title="Solids">
-  {#snippet aside()}
-    <span class="now">{clockTime(clock.now).replace(/\s?([AP])M$/i, (_, m) => m.toLowerCase())}</span>
-  {/snippet}
-
   <label class="search">
     <Icon name="search" size={18} stroke="var(--muted)" width={2} />
     <input placeholder="Find or add a food" aria-label="Find or add a food" bind:value={query}
@@ -111,16 +111,21 @@
     </div>
   </section>
 
+  <div class="when">
+    <TimeInput class="pill" value={at} onchange={t => (picked = t > Date.now() ? t - day : t)} label="Solids time">
+      At {clockTime(at)}
+    </TimeInput>
+  </div>
+
   <button class="primary-dark save" disabled={selected.length === 0} onclick={save}>
     {selected.length ? `Save · ${selected.length} ${selected.length === 1 ? 'food' : 'foods'}` : 'Save'}
   </button>
 </Overlay>
 
 <style>
-  .now {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--muted);
+  .when {
+    display: flex;
+    justify-content: center;
   }
 
   .search {

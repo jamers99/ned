@@ -83,8 +83,9 @@ export function startSleep(now = Date.now(), isNight = isNightTime(now)) {
   return startRunning({ Type: 'Sleep', Start: now, IsNight: isNight });
 }
 
-/** Saves the chosen foods on a Solids event and bumps each food's recency, creating new foods. */
-export async function addSolids(foods: { name: string; category: FoodCategory }[], amount: BabyEvent['SolidAmount']) {
+/** Saves the chosen foods on a Solids event at `at` and bumps each food's recency, creating new foods. */
+export async function addSolids(foods: { name: string; category: FoodCategory }[], amount: BabyEvent['SolidAmount'],
+  at = Date.now()) {
   const now = Date.now();
   const names = foods.map(f => f.name.trim());
   // Outside the transaction: awaiting anything but IndexedDB inside one lets it commit early.
@@ -102,7 +103,7 @@ export async function addSolids(foods: { name: string; category: FoodCategory }[
       await db.foods.put({ ...food, dirty: editStamp() });
     }
     await db.events.add({
-      ...newEvent({ Type: 'Solids', Start: now, End: now, Foods: names, SolidAmount: amount }),
+      ...newEvent({ Type: 'Solids', Start: at, End: at, Foods: names, SolidAmount: amount }),
       dirty: editStamp()
     });
   });
