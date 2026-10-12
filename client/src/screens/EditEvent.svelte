@@ -7,7 +7,7 @@
   import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { live } from '../lib/state.svelte.ts';
-  import { clock as clockTime, day, duration, mediumDate } from '../lib/time.ts';
+  import { clock as clockTime, day, duration, endAfter, mediumDate } from '../lib/time.ts';
 
   let { guid }: { guid: string } = $props();
 
@@ -31,7 +31,7 @@
 
   function setEnd(end: number) {
     if (!e) return;
-    set({ End: end < e.Start ? end + day : end });
+    set({ End: endAfter(e.Start, end) });
   }
 
   function remove() {

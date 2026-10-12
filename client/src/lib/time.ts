@@ -82,6 +82,15 @@ export function withTimeInput(ms: number, value: string): number {
   return d.getTime();
 }
 
+/**
+ * The end time picked on a time wheel: the first moment at or after `start` showing that clock time. A sleep never
+ * lasts a day, so this gets the date right on its own, even for a nap that was left running until the next day.
+ */
+export function endAfter(start: number, picked: number): number {
+  const end = withTimeInput(start, toTimeInput(picked));
+  return end < start ? addDays(end, 1) : end;
+}
+
 /** "2026-10-09" for an <input type="date">. */
 export function toDateInput(ms: number): string {
   const d = new Date(ms);

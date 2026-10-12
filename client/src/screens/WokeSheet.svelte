@@ -6,7 +6,7 @@
   import type { BabyEvent, WakeMood } from '../lib/db.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { napNumber, nextSleep, timeAsleep, wakingsDuring, type SleepTargets } from '../lib/sleep.ts';
-  import { clock as clockTime, clockShort, day, duration, minute } from '../lib/time.ts';
+  import { clock as clockTime, clockShort, day, duration, endAfter, minute } from '../lib/time.ts';
 
   let { guid, events, targets }: { guid: string; events: BabyEvent[]; targets: SleepTargets } = $props();
 
@@ -21,7 +21,7 @@
 
   function setEnd(end: number) {
     if (!sleep) return;
-    void updateEvent(guid, { End: end < sleep.Start ? end + day : end });
+    void updateEvent(guid, { End: endAfter(sleep.Start, end) });
   }
 </script>
 
