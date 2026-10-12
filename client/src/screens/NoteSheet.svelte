@@ -6,14 +6,13 @@
   let text = $state('');
 
   function save() {
-    if (!text.trim()) return;
     const now = Date.now();
-    void addEvent({ Type: 'Note', Start: now, End: now, Text: text.trim() });
+    if (text.trim()) void addEvent({ Type: 'Note', Start: now, End: now, Text: text.trim() });
     close();
   }
 </script>
 
-<Sheet>
+<Sheet onclose={save}>
   <div class="screen-title">Note</div>
   <!-- svelte-ignore a11y_autofocus -->
   <textarea bind:value={text} rows="4" placeholder="What happened?" aria-label="Note" autofocus></textarea>

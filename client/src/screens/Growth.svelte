@@ -53,6 +53,10 @@
     const oz = number(editing.oz);
     const length = number(editing.length);
     const head = number(editing.head);
+    if (!editing.guid && lb == null && oz == null && length == null && head == null) {
+      editing = null;
+      return;
+    }
     void saveGrowth({
       Guid: editing.guid,
       MeasuredAt: fromDateInput(editing.date),
@@ -97,7 +101,7 @@
 </Overlay>
 
 {#if editing}
-  <Sheet onclose={() => (editing = null)}>
+  <Sheet onclose={save}>
     <div class="screen-title">{editing.guid ? 'Measurement' : 'Add measurement'}</div>
     <label class="field"><span class="eyebrow">Date</span><input type="date" bind:value={editing.date} /></label>
     <div class="pair">
