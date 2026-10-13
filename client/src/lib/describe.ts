@@ -1,14 +1,15 @@
+import { baby } from './baby.ts';
 import type { BabyEvent, SettledBy, Side, SleepLocation, SleepOnset, SolidAmount } from './db.ts';
 import { clock, duration } from './time.ts';
 
 export const locationText: Record<SleepLocation, string> = { Crib: 'Crib', Contact: 'Contact', OnTheGo: 'On the go' };
-export const onsetText: Record<SleepOnset, string> = { Own: 'on her own', Fed: 'fed to sleep', Rocked: 'rocked', Held: 'held' };
-export const settledText: Record<SettledBy, string> = { Feeding: 'feeding', Soothing: 'soothing', Own: 'on her own' };
+export const onsetText: Record<SleepOnset, string> = { Own: `on ${baby.their} own`, Fed: 'fed to sleep', Rocked: 'rocked', Held: 'held' };
+export const settledText: Record<SettledBy, string> = { Feeding: 'feeding', Soothing: 'soothing', Own: `on ${baby.their} own` };
 export const amountText: Record<SolidAmount, string> = { Taste: 'a taste', Some: 'some', All: 'all of it' };
 
 // Chip labels, in the order the chips appear.
-export const onsetChoices: [SleepOnset, string][] = [['Own', 'On her own'], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
-export const settleChoices: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', 'On her own']];
+export const onsetChoices: [SleepOnset, string][] = [['Own', `On ${baby.their} own`], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
+export const settleChoices: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', `On ${baby.their} own`]];
 
 /** Seconds nursed on one side, counting the side that's running. */
 export function sideSeconds(feed: BabyEvent, side: Side, now: number): number {

@@ -5,6 +5,7 @@ A private, two-parent baby tracker built around one goal: help the baby sleep we
 **Non-negotiables**
 - **Feels native and instant.** Every tap updates the UI in the same frame. Nothing in the UI ever waits on the network.
 - **Offline-first.** The phone's local DB is the source of truth for the UI; the server is for sync and backup.
+- **Name and pronouns are data.** UI text takes the baby's name and pronouns from `client/src/lib/baby.ts` (Kennedy, she/her for now) — never spelled out in a screen — so they can become Settings fields later.
 - **Calm and simple.** Fewer features, done beautifully. When in doubt, leave it out.
 - **One-handed at 3am.** Big targets (≥44px, primary actions ≥96px), minimal typing.
 
@@ -67,7 +68,7 @@ The client owns an outbox. Server is a dumb, reliable store.
 Use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is for AI clients and third-party apps; don't use OAuth here. Read the framework's auth code for the exact endpoints and how it returns tokens.
 
 - **Users:** one Benevia user per parent. Give both one role with full access to Event, Growth, Food and Settings. No other RBAC.
-- **Sign in once per phone:** a first-run screen with username + password. After that, the user should never see a login again unless they sign out or the refresh token is revoked.
+- **Sign in once per phone:** a first-run screen with username + password, plus **Try it without an account** (a `guest` meta flag: nothing syncs, everything stays on the phone; signing in later from Settings syncs it all). After that, the user should never see a login again unless they sign out or the refresh token is revoked.
 - **Access token:** keep it in memory only, never in localStorage or IndexedDB. It is fine to lose it when the app closes.
 - **Refresh token:**
   - Core's login (`POST /api/auth/signin`, `POST /api/auth/refresh`) returns the refresh token in the JSON body and has no cookie option, so it is stored in IndexedDB, and the server sends a strict Content-Security-Policy with no third-party scripts. The app and API share one origin (the server serves the PWA).

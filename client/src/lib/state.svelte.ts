@@ -7,6 +7,8 @@ export const clock = $state({ now: Date.now() });
 export const status = $state({
   /** The signed-in parent, used as LoggedBy. Empty before the first sign-in. */
   user: '',
+  /** Chose to use the app without an account: everything stays on this phone and nothing syncs. */
+  guest: false,
   /** True when the refresh token stopped working. The app keeps working; it just can't sync. */
   needsSignIn: false,
   syncing: false,

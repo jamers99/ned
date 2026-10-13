@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { baby } from '../lib/baby.ts';
   import Icon from '../components/Icon.svelte';
   import TodayStrip from '../components/TodayStrip.svelte';
   import { startSleep } from '../lib/actions.ts';
@@ -41,7 +42,7 @@
       <div>
         <div class="date">{longDate(now)}</div>
         <div class="name">
-          <span class="serif">Kennedy</span>
+          <span class="serif">{baby.name}</span>
           <Icon name="sprig" size={24} stroke="var(--moss)" width={1.5} />
         </div>
       </div>
@@ -70,7 +71,7 @@
           </span>
         </div>
       {:else}
-        <div class="empty">Log a sleep to see her wake window.</div>
+        <div class="empty">Log a sleep to see {baby.their} wake window.</div>
       {/if}
     </section>
 

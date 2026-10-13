@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { baby, capital } from '../lib/baby.ts';
   import Icon from '../components/Icon.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { endFeed, startRunning, updateEvent } from '../lib/actions.ts';
@@ -54,7 +55,7 @@
   <header class="screen-header">
     <div>
       <div class="date">{longDate(now)}</div>
-      <div class="serif name">Kennedy</div>
+      <div class="serif name">{baby.name}</div>
     </div>
   </header>
 
@@ -81,7 +82,7 @@
     {:else}
       <div class="row">
         <button class="huge" onclick={() => settled('Soothing')}>Soothing</button>
-        <button class="huge" onclick={() => settled('Own')}>On her own</button>
+        <button class="huge" onclick={() => settled('Own')}>On {baby.their} own</button>
       </div>
     {/if}
   {:else}
@@ -93,7 +94,7 @@
       <div class="dim">{title} · since {clockTime(sleep.Start)}</div>
       <div class="big serif">{duration(timeAsleep(sleep, wakings, now))}</div>
       {#if typical}
-        <div class="dim small">Her naps usually run {duration(typical[0])}–{duration(typical[1])}</div>
+        <div class="dim small">{capital(baby.their)} naps usually run {duration(typical[0])}–{duration(typical[1])}</div>
       {:else if sleep.IsNight}
         <div class="dim small">
           {wakings.length === 0 ? 'No wakings yet' : `${wakings.length} ${wakings.length === 1 ? 'waking' : 'wakings'} so far`}
@@ -128,7 +129,7 @@
 
     <button class="woke" onclick={sleep.IsNight ? () => startRunning({ Type: 'NightWaking', Start: Date.now() }) : wokeUp}>
       <Icon name={sleep.IsNight ? 'moonStar' : 'sun'} size={28} stroke="var(--peach-text)" width={1.8} />
-      {sleep.IsNight ? "She's awake" : 'Woke up'}
+      {sleep.IsNight ? `${capital(baby.theyre)} awake` : 'Woke up'}
     </button>
     <TimeInput class="adjust" value={sleep.Start} onchange={adjustStart} label="Sleep start time">
       Adjust start time

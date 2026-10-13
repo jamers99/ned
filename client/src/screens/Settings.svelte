@@ -1,5 +1,6 @@
 <script lang="ts">
   import Overlay from '../components/Overlay.svelte';
+  import { baby, capital } from '../lib/baby.ts';
   import { updateSettings } from '../lib/actions.ts';
   import { signOut } from '../lib/auth.ts';
   import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
@@ -29,13 +30,13 @@
   const rows: { key: Target; label: string; help?: string; step: number; show: (v: number) => string }[] = [
     { key: 'NapsPerDay', label: 'Naps a day', step: 1, show: String },
     { key: 'NapWakeWindowMinutes', label: 'Awake before a nap', step: 5, show: length,
-      help: 'How long she can stay up before a nap.' },
+      help: `How long ${baby.they} can stay up before a nap.` },
     { key: 'BedtimeWakeWindowMinutes', label: 'Awake before bed', step: 5, show: length,
-      help: 'How long she can stay up after her last nap before bed.' },
+      help: `How long ${baby.they} can stay up after ${baby.their} last nap before bed.` },
     { key: 'NightStartMinutes', label: 'Bedtime', step: 15, show: time,
-      help: 'When she usually goes down for the night.' },
+      help: `When ${baby.they} usually goes down for the night.` },
     { key: 'NightEndMinutes', label: 'Morning', step: 15, show: time,
-      help: 'When she usually starts the day.' }
+      help: `When ${baby.they} usually starts the day.` }
   ];
 
   const isTime = (key: Target) => key === 'NightStartMinutes' || key === 'NightEndMinutes';
@@ -56,8 +57,8 @@
 <Overlay title="Settings">
   <section class="card list">
     <div>
-      <div class="eyebrow">Her sleep plan</div>
-      <p class="help">Used to suggest when her next nap or bedtime is.</p>
+      <div class="eyebrow">{capital(baby.their)} sleep plan</div>
+      <p class="help">Used to suggest when {baby.their} next nap or bedtime is.</p>
     </div>
     {#each rows as { key, label, help, step: size, show } (key)}
       <div class="setting">
@@ -75,7 +76,9 @@
   <section class="card list">
     <div class="eyebrow">Sync</div>
     <div class="status">
-      {#if status.needsSignIn}
+      {#if !status.user}
+        On this phone only — <button class="inline" onclick={() => open({ kind: 'signin' })}>sign in to sync</button>
+      {:else if status.needsSignIn}
         Signed out — <button class="inline" onclick={() => open({ kind: 'signin' })}>sign in to sync</button>
       {:else}
         {status.syncing ? 'Syncing…' : status.lastSyncedAt ? `Synced at ${clockTime(status.lastSyncedAt)}` : 'Not synced yet'}
@@ -110,10 +113,12 @@
     {/each}
   </section>
 
-  <section class="card list">
-    <div class="eyebrow">Signed in as {status.user}</div>
-    <button class="chip" onclick={leave}>Sign out</button>
-  </section>
+  {#if status.user}
+    <section class="card list">
+      <div class="eyebrow">Signed in as {status.user}</div>
+      <button class="chip" onclick={leave}>Sign out</button>
+    </section>
+  {/if}
 
   <div class="version">
     Version {new Date(__BUILD_TIME__).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}

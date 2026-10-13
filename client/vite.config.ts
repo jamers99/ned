@@ -13,8 +13,8 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Ned – Baby Tracker',
-        short_name: 'Ned – Baby Tracker',
+        name: 'Ned Baby Tracker',
+        short_name: 'Ned',
         description: 'Sleep-first baby tracker',
         display: 'standalone',
         orientation: 'portrait',

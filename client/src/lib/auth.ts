@@ -18,6 +18,13 @@ export class SignInRequired extends Error {
 
 export async function loadUser() {
   status.user = (await getMeta<string>('user')) ?? '';
+  status.guest = (await getMeta<boolean>('guest')) ?? false;
+}
+
+/** Uses the app without an account. Signing in later keeps everything logged so far and syncs it. */
+export async function skipSignIn() {
+  await setMeta('guest', true);
+  status.guest = true;
 }
 
 /** Returns an error message, or an empty string when signed in. Signing in never touches local data. */
@@ -52,6 +59,7 @@ export async function signOut(clearData: boolean) {
   if (clearData)
     await Promise.all(syncedTables.map(table => db[table].clear()));
   status.user = '';
+  status.guest = false;
   status.needsSignIn = false;
 }
 

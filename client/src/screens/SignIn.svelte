@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
-  import { signIn } from '../lib/auth.ts';
+  import { signIn, skipSignIn } from '../lib/auth.ts';
   import { close, nav } from '../lib/nav.svelte.ts';
   import { syncNow } from '../lib/sync.ts';
 
@@ -30,7 +30,8 @@
     <div class="brand">
       <Icon name="sprig" size={56} stroke="var(--moss)" width={1.3} />
       <h1 class="serif">Ned</h1>
-      <p>Sign in once on this phone. Everything you log stays on the phone and syncs in the background.</p>
+      <p>Sign in to share one log across both parents' phones. Ned saves to this phone first, so it works offline
+        and syncs when it can.</p>
     </div>
 
     <label>
@@ -44,6 +45,15 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
 
     <button class="primary-dark" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+
+    {#if nav.overlay?.kind === 'signin'}
+      <button type="button" class="skip" onclick={close}>Not now</button>
+    {:else}
+      <div class="try">
+        <button type="button" class="skip" onclick={skipSignIn}>Try it without an account</button>
+        <p>Everything stays on this phone. Sign in any time from Settings to sync what you've logged.</p>
+      </div>
+    {/if}
   </form>
 </div>
 
@@ -92,6 +102,27 @@
     background: var(--surface);
     font-size: 17px;
     outline: 0;
+  }
+
+  .try {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .try p {
+    font-size: 13px;
+  }
+
+  .skip {
+    min-height: 54px;
+    border-radius: 30px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 800;
   }
 
   .error {
