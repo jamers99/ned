@@ -2,8 +2,9 @@ export const minute = 60_000;
 export const hour = 60 * minute;
 export const day = 24 * hour;
 
-/** "1h 48m", "38m". */
+/** "1h 48m", "38m", or "42s" under a minute, so a timer that just started visibly ticks. */
 export function duration(ms: number): string {
+  if (ms > 0 && ms < minute) return `${Math.floor(ms / 1000)}s`;
   const totalMinutes = Math.max(0, Math.floor(ms / minute));
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;

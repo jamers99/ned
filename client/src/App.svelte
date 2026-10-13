@@ -40,7 +40,7 @@
   });
 </script>
 
-{#if !status.user}
+{#if !status.user && !status.guest}
   <SignIn />
 {:else if recent.value}
   <main class:dark>
