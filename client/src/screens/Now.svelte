@@ -3,6 +3,7 @@
   import TodayStrip from '../components/TodayStrip.svelte';
   import { startSleep } from '../lib/actions.ts';
   import type { BabyEvent } from '../lib/db.ts';
+  import { nursedSeconds } from '../lib/describe.ts';
   import { appear } from '../lib/motion.ts';
   import { open, showTab } from '../lib/nav.svelte.ts';
   import { isNightTime, latestRunning, nextSleep, type SleepTargets } from '../lib/sleep.ts';
@@ -19,9 +20,6 @@
 
   const awakeFor = $derived(next ? now - next.awakeSince : 0);
   const barSpan = $derived(next ? next.to - next.awakeSince + 20 * minute : 1);
-  const feedSeconds = $derived(feeding
-    ? feeding.LeftSeconds + feeding.RightSeconds + (feeding.ActiveSince ? (now - feeding.ActiveSince) / 1000 : 0)
-    : 0);
 
   // The last finished feed or solids, timed from when it started, like the gap between feeds is usually counted.
   const lastMeal = $derived(events.filter(e => (e.Type === 'Feed' || e.Type === 'Solids') && e.End != null).at(-1));
@@ -63,12 +61,12 @@
         <div class="bar" aria-hidden="true">
           <div class="fill" style:transform="translateX({Math.min(100, (awakeFor / barSpan) * 100) - 100}%)"></div>
           <div class="target" style:left="{((next.from - next.awakeSince) / barSpan) * 100}%"
-            style:width="{((next.to - next.from) / barSpan) * 100}%"></div>
+            style:width="{Math.max(1.5, ((next.to - next.from) / barSpan) * 100)}%"></div>
         </div>
         <div class="window">
           <span>Wake window ~{duration(next.targetMinutes * minute)}</span>
           <span class="next">
-            {next.kind === 'nap' ? 'Nap' : 'Bedtime'} {clockShort(next.from)}–{clockShort(next.to)}
+            {#if next.kind === 'nap'}Nap {clockShort(next.from)}–{clockShort(next.to)}{:else}Bedtime {clockTime(next.from)}{/if}
           </span>
         </div>
       {:else}
@@ -76,15 +74,15 @@
       {/if}
     </section>
 
-    <button class="start-sleep" onclick={() => startSleep()}>
+    <button class="start-sleep" onclick={() => startSleep(Date.now(), isNightTime(Date.now(), targets))}>
       <Icon name="moonStar" size={28} stroke="var(--surface)" width={1.8} />
-      {isNightTime(now) ? 'Start night' : 'Start sleep'}
+      {isNightTime(now, targets) ? 'Start night' : 'Start nap'}
     </button>
 
     <div class="tiles">
       <button class="tile" class:running={feeding} onclick={() => open({ kind: 'feed' })}>
         <Icon name="drop" stroke="var(--terra-text)" />
-        {feeding ? stopwatch(feedSeconds * 1000) : 'Feed'}
+        {feeding ? stopwatch(nursedSeconds(feeding, now) * 1000) : 'Feed'}
       </button>
       <button class="tile" onclick={() => open({ kind: 'solids' })}>
         <Icon name="bowl" stroke="var(--terra-text)" />
@@ -212,7 +210,7 @@
     border: 0;
     border-radius: 30px;
     background: var(--moss);
-    color: var(--surface);
+    color: var(--on-moss);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,7 +218,7 @@
     font-family: var(--serif);
     font-size: 26px;
     font-weight: 600;
-    box-shadow: 0 8px 22px rgba(62, 74, 53, 0.25);
+    box-shadow: var(--button-shadow);
   }
 
   .tiles {

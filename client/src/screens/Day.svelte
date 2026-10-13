@@ -174,7 +174,7 @@
     border-radius: 20px;
     padding: 13px 16px;
     background: var(--moss);
-    color: var(--surface);
+    color: var(--on-moss);
   }
 
   .sleep-label {
@@ -185,7 +185,7 @@
   .sleep-meta {
     font-size: 13px;
     font-weight: 600;
-    color: #DDE3D0;
+    color: var(--on-moss-soft);
   }
 
   .sleep-duration {
@@ -208,7 +208,7 @@
     width: 2px;
     height: 20px;
     border-radius: 1px;
-    background: #C98A6C;
+    background: var(--terra-soft);
   }
 
   .event {

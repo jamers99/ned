@@ -91,7 +91,7 @@
   }
 
   .sleep.nap {
-    background: #8E9B7D;
+    background: var(--moss-nap);
   }
 
   .feed {

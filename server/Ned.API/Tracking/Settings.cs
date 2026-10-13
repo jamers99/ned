@@ -13,23 +13,19 @@ public partial class Settings : ISynced
     [DefaultValue(2)]
     public partial int NapsPerDay { get; set; }
 
-    [Property<DataTypes.Integer>("Wake window before nap 1 (minutes)")]
+    [Property<DataTypes.Integer>("Wake window before a nap (minutes)")]
     [DefaultValue(150)]
-    public partial int Nap1WakeWindowMinutes { get; set; }
-
-    [Property<DataTypes.Integer>("Wake window before later naps (minutes)")]
-    [DefaultValue(165)]
-    public partial int Nap2WakeWindowMinutes { get; set; }
+    public partial int NapWakeWindowMinutes { get; set; }
 
     [Property<DataTypes.Integer>("Wake window before bed (minutes)")]
     [DefaultValue(210)]
     public partial int BedtimeWakeWindowMinutes { get; set; }
 
-    [Property<DataTypes.Integer>("Earliest bedtime (minutes after midnight)")]
-    [DefaultValue(18 * 60 + 30)]
-    public partial int BedtimeEarliestMinutes { get; set; }
+    [Property<DataTypes.Integer>("Night starts (minutes after midnight)")]
+    [DefaultValue(20 * 60)]
+    public partial int NightStartMinutes { get; set; }
 
-    [Property<DataTypes.Integer>("Latest bedtime (minutes after midnight)")]
-    [DefaultValue(19 * 60 + 30)]
-    public partial int BedtimeLatestMinutes { get; set; }
+    [Property<DataTypes.Integer>("Night ends (minutes after midnight)")]
+    [DefaultValue(6 * 60)]
+    public partial int NightEndMinutes { get; set; }
 }

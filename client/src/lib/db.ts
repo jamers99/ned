@@ -59,11 +59,11 @@ export interface Food extends Synced {
 
 export interface Settings extends Synced {
   NapsPerDay: number;
-  Nap1WakeWindowMinutes: number;
-  Nap2WakeWindowMinutes: number;
+  NapWakeWindowMinutes: number;
   BedtimeWakeWindowMinutes: number;
-  BedtimeEarliestMinutes: number;
-  BedtimeLatestMinutes: number;
+  /** The night, as minutes after midnight: 8 PM – 6 AM by default. Bedtime aims for its start. */
+  NightStartMinutes: number;
+  NightEndMinutes: number;
 }
 
 export interface Meta {

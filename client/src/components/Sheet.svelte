@@ -75,7 +75,7 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    background: rgba(58, 47, 37, 0.45);
+    background: var(--scrim);
   }
 
   .dismiss {
@@ -109,7 +109,7 @@
     width: 40px;
     height: 5px;
     border-radius: 3px;
-    background: #DCCFBB;
+    background: var(--line);
     align-self: center;
     flex: none;
   }

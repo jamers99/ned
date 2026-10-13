@@ -58,8 +58,8 @@
         <Icon name="moon" stroke="var(--moss-deep)" width={1.8} />
         <div>
           <div class="callout-title">
-            {next.kind === 'nap' ? `Nap ${next.napNumber} window` : 'Bedtime window'}
-            {clockShort(next.from)}–{clockTime(next.to)}
+            {#if next.kind === 'nap'}Nap {next.napNumber} window {clockShort(next.from)}–{clockTime(next.to)}
+            {:else}Bedtime {clockTime(next.from)}{/if}
           </div>
           <div class="callout-note">
             {next.kind === 'nap' ? 'Wake window' : 'Last wake window of the day'}
@@ -117,7 +117,7 @@
   .mood-grid button.on {
     border-color: transparent;
     background: var(--moss);
-    color: var(--surface);
+    color: var(--on-moss);
     font-weight: 800;
   }
 
@@ -139,6 +139,6 @@
   .callout-note {
     font-size: 13px;
     font-weight: 600;
-    color: #4E5B43;
+    color: var(--moss-callout-note);
   }
 </style>

@@ -1,4 +1,4 @@
-import type { BabyEvent, SettledBy, SleepLocation, SleepOnset, SolidAmount } from './db.ts';
+import type { BabyEvent, SettledBy, Side, SleepLocation, SleepOnset, SolidAmount } from './db.ts';
 import { clock, duration } from './time.ts';
 
 export const locationText: Record<SleepLocation, string> = { Crib: 'Crib', Contact: 'Contact', OnTheGo: 'On the go' };
@@ -10,6 +10,14 @@ export const amountText: Record<SolidAmount, string> = { Taste: 'a taste', Some:
 export const onsetChoices: [SleepOnset, string][] = [['Own', 'On her own'], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
 export const settleChoices: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', 'On her own']];
 
+/** Seconds nursed on one side, counting the side that's running. */
+export function sideSeconds(feed: BabyEvent, side: Side, now: number): number {
+  const running = feed.ActiveSide === side && feed.ActiveSince ? (now - feed.ActiveSince) / 1000 : 0;
+  return feed[side === 'Left' ? 'LeftSeconds' : 'RightSeconds'] + running;
+}
+
+export const nursedSeconds = (feed: BabyEvent, now: number) => sideSeconds(feed, 'Left', now) + sideSeconds(feed, 'Right', now);
+
 /** Title and detail lines for an event row on the Day screen. */
 export function describe(e: BabyEvent, now: number): { label: string; meta: string; time: string } {
   const time = clock(e.Start);
@@ -18,9 +26,8 @@ export function describe(e: BabyEvent, now: number): { label: string; meta: stri
   switch (e.Type) {
     case 'Feed': {
       if (e.FeedKind === 'Bottle') return { label: `Bottle · ${e.BottleOz ?? 0} oz`, meta: withNote(''), time };
-      const running = e.ActiveSince ? (now - e.ActiveSince) / 1000 : 0;
-      const left = e.LeftSeconds + (e.ActiveSide === 'Left' ? running : 0);
-      const right = e.RightSeconds + (e.ActiveSide === 'Right' ? running : 0);
+      const left = sideSeconds(e, 'Left', now);
+      const right = sideSeconds(e, 'Right', now);
       const label = e.End == null ? 'Nursing now' : `Nursed · ${duration((left + right) * 1000)}`;
       const meta = `L ${duration(left * 1000)} · R ${duration(right * 1000)}`;
       return { label, meta: withNote(meta), time };

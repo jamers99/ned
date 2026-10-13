@@ -7,7 +7,6 @@ export type Overlay =
   | { kind: 'solids' }
   | { kind: 'note' }
   | { kind: 'woke'; guid: string }
-  | { kind: 'night' }
   | { kind: 'edit'; guid: string }
   | { kind: 'growth' }
   | { kind: 'settings' }

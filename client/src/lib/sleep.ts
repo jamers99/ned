@@ -1,25 +1,34 @@
 import type { BabyEvent, Settings } from './db.ts';
 import { addDays, atMinuteOfDay, day, duration, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
-export type SleepTargets = Pick<Settings, 'NapsPerDay' | 'Nap1WakeWindowMinutes' | 'Nap2WakeWindowMinutes'
-  | 'BedtimeWakeWindowMinutes' | 'BedtimeEarliestMinutes' | 'BedtimeLatestMinutes'>;
+export type SleepTargets = Pick<Settings, 'NapsPerDay' | 'NapWakeWindowMinutes' | 'BedtimeWakeWindowMinutes'
+  | 'NightStartMinutes' | 'NightEndMinutes'>;
 
 /** Targets for about seven months old. */
 export const defaultTargets: SleepTargets = {
   NapsPerDay: 2,
-  Nap1WakeWindowMinutes: 150,
-  Nap2WakeWindowMinutes: 165,
+  NapWakeWindowMinutes: 150,
   BedtimeWakeWindowMinutes: 210,
-  BedtimeEarliestMinutes: 18 * 60 + 30,
-  BedtimeLatestMinutes: 19 * 60 + 30
+  NightStartMinutes: 20 * 60,
+  NightEndMinutes: 6 * 60
 };
+
+/** The settings row, with defaults for anything a phone hasn't pulled yet (such as fields added later). */
+export function targetsFrom(row: Partial<SleepTargets> | undefined): SleepTargets {
+  return { ...defaultTargets, ...Object.fromEntries(Object.entries(row ?? {}).filter(([, v]) => v != null)) };
+}
 
 const windowSlack = 10 * minute;
 
-/** A sleep starting between 17:30 and 04:00 is a night sleep unless the parent says otherwise. */
-export function isNightTime(ms: number): boolean {
+/**
+ * Whether a time is between bedtime and morning. A sleep starting then is a night sleep (decided once when it
+ * starts; the Day view's edit sheet can change it), and the app goes dim.
+ */
+export function isNightTime(ms: number, targets: Pick<SleepTargets, 'NightStartMinutes' | 'NightEndMinutes'>): boolean {
   const m = minuteOfDay(ms);
-  return m >= 17 * 60 + 30 || m < 4 * 60;
+  const from = targets.NightStartMinutes;
+  const to = targets.NightEndMinutes;
+  return from <= to ? m >= from && m < to : m >= from || m < to;
 }
 
 const isSleep = (e: BabyEvent) => e.Type === 'Sleep' && !e.Deleted;
@@ -71,7 +80,7 @@ export interface NextSleep {
   napNumber: number;
   awakeSince: number;
   targetMinutes: number;
-  /** The target window: the wake-window target ± 10 minutes. */
+  /** The target window: the wake-window target ± 10 minutes for a nap; the bedtime itself for bed. */
   from: number;
   to: number;
 }
@@ -84,9 +93,11 @@ export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep
   const awakeSince = last.End!;
   const dayStart = lastNightEnd(events, awakeSince + 1) ?? startOfDay(awakeSince);
   const napsToday = events.filter(e => isNap(e) && e.Start >= dayStart && e.Start < awakeSince).length;
-  const napTarget = napsToday === 0 ? targets.Nap1WakeWindowMinutes : targets.Nap2WakeWindowMinutes;
-  const earliestBedtime = atMinuteOfDay(awakeSince, targets.BedtimeEarliestMinutes);
-  const isBedtime = napsToday >= targets.NapsPerDay || awakeSince + napTarget * minute >= earliestBedtime;
+  const napTarget = targets.NapWakeWindowMinutes;
+  const bedtime = atMinuteOfDay(awakeSince, targets.NightStartMinutes);
+  // Another nap only fits if there's still room for its wake window and the one before bed.
+  const noRoomForNap = awakeSince + (napTarget + targets.BedtimeWakeWindowMinutes) * minute > bedtime;
+  const isBedtime = napsToday >= targets.NapsPerDay || noRoomForNap;
 
   if (!isBedtime) {
     const center = awakeSince + napTarget * minute;
@@ -96,13 +107,10 @@ export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep
     };
   }
 
-  const latestBedtime = atMinuteOfDay(awakeSince, targets.BedtimeLatestMinutes);
-  let center = awakeSince + targets.BedtimeWakeWindowMinutes * minute;
-  if (latestBedtime - earliestBedtime >= 2 * windowSlack)
-    center = Math.min(Math.max(center, earliestBedtime + windowSlack), latestBedtime - windowSlack);
+  // Bedtime is the bedtime setting, whatever the wake window says; her wake window is however long that leaves.
   return {
-    kind: 'bedtime', napNumber: napsToday + 1, awakeSince, targetMinutes: targets.BedtimeWakeWindowMinutes,
-    from: center - windowSlack, to: center + windowSlack
+    kind: 'bedtime', napNumber: napsToday + 1, awakeSince, targetMinutes: Math.round((bedtime - awakeSince) / minute),
+    from: bedtime, to: bedtime
   };
 }
 

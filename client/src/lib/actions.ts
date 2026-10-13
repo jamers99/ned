@@ -1,8 +1,8 @@
 // Every local write goes through here: write to Dexie, mark the row dirty, and schedule a push.
 // The UI re-renders from Dexie, so nothing waits on the network.
-import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings } from './db.ts';
+import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings, type Side } from './db.ts';
 import { foodGuid, settingsGuid } from './ids.ts';
-import { defaultTargets, isNightTime } from './sleep.ts';
+import { targetsFrom } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
 import { day } from './time.ts';
@@ -79,7 +79,18 @@ export async function startRunning(fields: Partial<BabyEvent> & Pick<BabyEvent, 
   return event;
 }
 
-export function startSleep(now = Date.now(), isNight = isNightTime(now)) {
+/** Stops the running side at `at`, folding its time into its total, then starts `side` (if any). */
+export function switchSide(feed: BabyEvent, side: Side | null, at = Date.now(), changes: Partial<BabyEvent> = {}) {
+  if (feed.ActiveSide && feed.ActiveSince) {
+    const key = feed.ActiveSide === 'Left' ? 'LeftSeconds' : 'RightSeconds';
+    changes[key] = feed[key] + Math.round((at - feed.ActiveSince) / 1000);
+  }
+  return updateEvent(feed.Guid, { ...changes, ActiveSide: side, ActiveSince: side ? at : null });
+}
+
+export const endFeed = (feed: BabyEvent, at = Date.now()) => switchSide(feed, null, at, { End: at });
+
+export function startSleep(now: number, isNight: boolean) {
   return startRunning({ Type: 'Sleep', Start: now, IsNight: isNight });
 }
 
@@ -129,8 +140,9 @@ export async function deleteGrowth(guid: string) {
 }
 
 export async function loadSettings(): Promise<Settings> {
-  return (await db.settings.get(settingsGuid)) ?? {
-    Guid: settingsGuid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0, ...defaultTargets
+  const row = await db.settings.get(settingsGuid);
+  return {
+    Guid: settingsGuid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0, ...row, ...targetsFrom(row)
   };
 }
 

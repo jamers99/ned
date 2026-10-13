@@ -152,7 +152,7 @@
     max-width: 36px;
     min-height: 4px;
     border-radius: 8px 8px 4px 4px;
-    background: #C3CBB3;
+    background: var(--moss-bar);
   }
 
   .bar.latest {
@@ -215,14 +215,14 @@
     font-size: 17px;
     font-weight: 500;
     font-style: italic;
-    color: #2F3828;
+    color: var(--on-moss-callout);
     line-height: 1.4;
   }
 
   .pattern-note {
     font-size: 13px;
     font-weight: 700;
-    color: #4E5B43;
+    color: var(--moss-callout-note);
   }
 
   .growth {
