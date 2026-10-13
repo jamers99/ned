@@ -1,8 +1,9 @@
 <script lang="ts">
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, startRunning, updateEvent } from '../lib/actions.ts';
+  import { addEvent, endFeed, startRunning, switchSide, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
+  import { sideSeconds } from '../lib/describe.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { latestRunning } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -12,6 +13,8 @@
 
   const now = $derived(clock.now);
   const feed = $derived(latestRunning(events, 'Feed'));
+  // During a night waking she often falls asleep at the breast: Asleep saves the feed and the waking at once.
+  const waking = $derived(latestRunning(events, 'NightWaking'));
   const lastNursing = $derived(events.filter(e => e.FeedKind === 'Nursing' && e.End != null && e.StartSide).at(-1));
 
   let kind = $state<FeedKind>('Nursing');
@@ -26,38 +29,21 @@
     bottleTime = Date.now();
   }
 
-  const secondsKey = (side: Side) => (side === 'Left' ? 'LeftSeconds' : 'RightSeconds');
-
-  function seconds(side: Side): number {
-    if (!feed) return 0;
-    const running = feed.ActiveSide === side && feed.ActiveSince ? (now - feed.ActiveSince) / 1000 : 0;
-    return feed[secondsKey(side)] + running;
-  }
-
-  /** Folds the running side's time into its total. */
-  function banked(at: number): Partial<BabyEvent> {
-    if (!feed?.ActiveSide || !feed.ActiveSince) return {};
-    const key = secondsKey(feed.ActiveSide);
-    return { [key]: feed[key] + Math.round((at - feed.ActiveSince) / 1000) };
-  }
+  const seconds = (side: Side) => (feed ? sideSeconds(feed, side, now) : 0);
 
   function tap(side: Side) {
     const at = Date.now();
     lastTapped = side;
-    if (!feed) {
+    if (!feed)
       void startRunning({ Type: 'Feed', FeedKind: 'Nursing', Start: at, StartSide: side, ActiveSide: side, ActiveSince: at });
-      return;
-    }
-    if (feed.ActiveSide === side)
-      void updateEvent(feed.Guid, { ...banked(at), ActiveSide: null, ActiveSince: null });
     else
-      void updateEvent(feed.Guid, { ...banked(at), ActiveSide: side, ActiveSince: at });
+      void switchSide(feed, feed.ActiveSide === side ? null : side, at);
   }
 
   function nudge(deltaSeconds: number) {
     const side = feed?.ActiveSide ?? lastTapped ?? feed?.StartSide;
     if (!feed || !side) return;
-    const key = secondsKey(side);
+    const key = side === 'Left' ? 'LeftSeconds' : 'RightSeconds';
     void updateEvent(feed.Guid, { [key]: Math.max(0, feed[key] + deltaSeconds) });
   }
 
@@ -65,17 +51,18 @@
     if (feed) void updateEvent(feed.Guid, { Start: start > Date.now() ? start - day : start });
   }
 
-  function done() {
-    if (feed) {
-      const at = Date.now();
-      void updateEvent(feed.Guid, { ...banked(at), ActiveSide: null, ActiveSince: null, End: at });
-    }
+  function save() {
+    if (kind === 'Bottle')
+      void addEvent({ Type: 'Feed', FeedKind: 'Bottle', Start: bottleTime, End: bottleTime, BottleOz: bottleOz });
+    else if (feed)
+      void endFeed(feed);
     close();
   }
 
-  function saveBottle() {
-    void addEvent({ Type: 'Feed', FeedKind: 'Bottle', Start: bottleTime, End: bottleTime, BottleOz: bottleOz });
-    close();
+  /** She fell asleep feeding: saves the feed and closes the waking in one tap. */
+  function asleep() {
+    if (waking) void updateEvent(waking.Guid, { End: Date.now(), SettledBy: 'Feeding' });
+    save();
   }
 </script>
 
@@ -119,8 +106,6 @@
         </TimeInput>
       </div>
     {/if}
-
-    <button class="primary-dark save" onclick={done}>{feed ? 'Done · save feed' : 'Close'}</button>
   {:else}
     <section class="total">
       <div class="total-label">Bottle</div>
@@ -136,7 +121,17 @@
         At {clockTime(bottleTime)}
       </TimeInput>
     </div>
-    <button class="primary-dark save" onclick={saveBottle}>Save bottle</button>
+  {/if}
+
+  {#if waking && (feed || kind === 'Bottle')}
+    <div class="finish">
+      <button class="primary-dark" onclick={asleep}>Asleep</button>
+      <button class="primary-light" onclick={save}>Save · still awake</button>
+    </div>
+  {:else}
+    <button class="primary-dark save" onclick={save}>
+      {kind === 'Bottle' ? 'Save bottle' : feed ? 'Done · save feed' : 'Close'}
+    </button>
   {/if}
 </Overlay>
 
@@ -234,7 +229,7 @@
     border-color: transparent;
     background: var(--terra);
     color: var(--surface);
-    box-shadow: 0 10px 26px rgba(176, 88, 58, 0.35);
+    box-shadow: var(--feed-shadow);
   }
 
   .side-name {
@@ -282,7 +277,29 @@
     font-weight: 600;
   }
 
-  .save {
+  .save,
+  .finish {
     margin-top: auto;
+  }
+
+  .finish {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .finish .primary-dark {
+    height: 96px;
+    font-size: 26px;
+  }
+
+  .primary-light {
+    height: 56px;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 800;
   }
 </style>

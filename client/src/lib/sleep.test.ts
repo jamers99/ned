@@ -29,26 +29,33 @@ const nextNight = event({ Type: 'Sleep', IsNight: true, Start: at(8, '19:05'), E
 
 describe('night default', () => {
   it.each([
-    ['17:29', false], ['17:30', true], ['23:00', true], ['03:59', true], ['04:00', false], ['13:00', false]
+    ['19:59', false], ['20:00', true], ['23:00', true], ['05:59', true], ['06:00', false], ['13:00', false]
   ])('a sleep starting at %s is night: %s', (time, expected) => {
-    expect(isNightTime(at(8, time))).toBe(expected);
+    expect(isNightTime(at(8, time), defaultTargets)).toBe(expected);
+  });
+
+  it('follows the night setting', () => {
+    const early = { NightStartMinutes: 18 * 60 + 30, NightEndMinutes: 5 * 60 };
+    expect(isNightTime(at(8, '18:29'), early)).toBe(false);
+    expect(isNightTime(at(8, '18:30'), early)).toBe(true);
+    expect(isNightTime(at(8, '05:00'), early)).toBe(false);
   });
 });
 
 describe('next sleep window', () => {
-  it('follows the nap targets through the day, then lands bedtime inside the target window', () => {
+  it('follows the nap target through the day, then aims for the bedtime setting', () => {
     const afterNight = nextSleep([night], defaultTargets)!;
     expect(afterNight).toMatchObject({ kind: 'nap', napNumber: 1, targetMinutes: 150 });
     expect([clockTime(afterNight.from), clockTime(afterNight.to)]).toEqual([clockTime(at(8, '09:00')), clockTime(at(8, '09:20'))]);
 
     const afterNap1 = nextSleep([night, nap1], defaultTargets)!;
-    expect(afterNap1).toMatchObject({ kind: 'nap', napNumber: 2, targetMinutes: 165 });
-    expect(afterNap1.from).toBe(at(8, '12:55'));
+    expect(afterNap1).toMatchObject({ kind: 'nap', napNumber: 2, targetMinutes: 150 });
+    expect(afterNap1.from).toBe(at(8, '12:40'));
 
-    // 1:35 PM + 3h 30m is 5:05 PM, earlier than the 6:30 PM earliest bedtime, so it moves into the window.
+    // After the day's two naps it's bedtime: 8 PM, which leaves a 6h 25m wake window after a nap ending at 1:35 PM.
     const afterNap2 = nextSleep([night, nap1, nap2], defaultTargets)!;
-    expect(afterNap2).toMatchObject({ kind: 'bedtime', targetMinutes: 210 });
-    expect([afterNap2.from, afterNap2.to]).toEqual([at(8, '18:30'), at(8, '18:50')]);
+    expect(afterNap2).toMatchObject({ kind: 'bedtime', targetMinutes: 6 * 60 + 25 });
+    expect([afterNap2.from, afterNap2.to]).toEqual([at(8, '20:00'), at(8, '20:00')]);
   });
 
   it('switches to bedtime when another nap would run into the evening', () => {

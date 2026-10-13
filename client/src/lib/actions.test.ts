@@ -10,7 +10,7 @@ beforeEach(async () => {
 
 describe('starting something that runs', () => {
   it('starts one sleep however many times Start sleep is tapped', async () => {
-    const taps = await Promise.all([startSleep(), startSleep(), startSleep()]);
+    const taps = await Promise.all([startSleep(Date.now(), false), startSleep(Date.now(), false), startSleep(Date.now(), false)]);
 
     expect((await db.events.toArray()).filter(e => e.Type === 'Sleep')).toHaveLength(1);
     expect(new Set(taps.map(t => t.Guid)).size).toBe(1);
@@ -20,7 +20,7 @@ describe('starting something that runs', () => {
     const night = await startSleep(Date.now(), true);
     await startRunning({ Type: 'NightWaking', Start: Date.now() });
     await db.events.update(night.Guid, { End: Date.now() });
-    await startSleep();
+    await startSleep(Date.now(), false);
 
     const types = (await db.events.toArray()).map(e => e.Type).sort();
     expect(types).toEqual(['NightWaking', 'Sleep', 'Sleep']);

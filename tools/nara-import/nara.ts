@@ -2,7 +2,7 @@
 import type { BabyEvent, Food, Growth, SolidAmount } from '../../client/src/lib/db.ts';
 import { foodGuid, uuidV5 } from '../../client/src/lib/ids.ts';
 import { presetCategory } from '../../client/src/lib/foods.ts';
-import { isNightTime } from '../../client/src/lib/sleep.ts';
+import { defaultTargets, isNightTime } from '../../client/src/lib/sleep.ts';
 
 const naraNamespace = '9b8f2a64-1c3e-4d5f-8a7b-6c5d4e3f2a1b';
 
@@ -132,7 +132,7 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
       }
       case 'Sleep': {
         const end = Number(get(row, 'sleepEnd')) || null;
-        result.events.push({ ...base, Type: 'Sleep', End: end, IsNight: isNightTime(start) });
+        result.events.push({ ...base, Type: 'Sleep', End: end, IsNight: isNightTime(start, defaultTargets) });
         break;
       }
       case 'Growth': {

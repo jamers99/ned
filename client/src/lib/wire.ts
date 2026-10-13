@@ -16,8 +16,8 @@ export const fields: Record<SyncedTable, string[]> = {
     'SolidAmount', 'Text'],
   growth: [...common, 'MeasuredAt', 'WeightKg', 'LengthCm', 'HeadCm'],
   foods: [...common, 'Name', 'Category', 'LastUsedAt', 'UseCount'],
-  settings: [...common, 'NapsPerDay', 'Nap1WakeWindowMinutes', 'Nap2WakeWindowMinutes', 'BedtimeWakeWindowMinutes',
-    'BedtimeEarliestMinutes', 'BedtimeLatestMinutes']
+  settings: [...common, 'NapsPerDay', 'NapWakeWindowMinutes', 'BedtimeWakeWindowMinutes', 'NightStartMinutes',
+    'NightEndMinutes']
 };
 
 const timeFields: Record<SyncedTable, string[]> = {

@@ -150,7 +150,7 @@
   }
 
   .search input::placeholder {
-    color: #8A7C6B;
+    color: var(--placeholder);
   }
 
   .chosen {
@@ -159,7 +159,7 @@
 
   .presets .chip:not(.on) {
     border-style: dashed;
-    border-color: #D3C5AF;
+    border-color: var(--line-strong);
     background: transparent;
   }
 
@@ -208,7 +208,7 @@
   .amounts button.on {
     border-color: transparent;
     background: var(--moss);
-    color: var(--surface);
+    color: var(--on-moss);
     font-weight: 800;
   }
 

@@ -29,7 +29,7 @@ All records (the `ISynced` interface): `Guid` (Core's primary key, **generated o
 | `Type` | `Sleep` \| `NightWaking` \| `Feed` \| `Solids` \| `Note` |
 | `Start` | required |
 | `End` | null while running (sleep/feed timer in progress) |
-| `IsNight` | Sleep only. Default: true if Start is between 17:30 and 04:00; user can toggle |
+| `IsNight` | Sleep only. Set when the sleep starts: true if Start is between Settings' bedtime and morning. Changed only from the Day view's edit sheet |
 | `SleepLocation` | `Crib` \| `Contact` \| `OnTheGo` (nullable) |
 | `SleepOnset` | how she fell asleep: `Own` \| `Fed` \| `Rocked` \| `Held` (nullable) |
 | `WakeMood` | `Happy` \| `Fussy` \| `Crying` (nullable) |
@@ -49,7 +49,7 @@ Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are
 
 **Food** — `Name` (unique, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`. The `Guid` is a UUIDv5 of the lower-cased name, so both phones adding "Mango" offline upsert the same row.
 
-**Settings** (local + synced single row with a fixed `Guid`) — naps per day, wake-window targets per nap index (default for ~7 months: nap1 2h30m, nap2 2h45m, before bed 3h30m), bedtime target window (6:30–7:30 PM).
+**Settings** (local + synced single row with a fixed `Guid`) — naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
 
 ## Sync
 
@@ -106,24 +106,26 @@ Cottage feel: warm linen, sage for sleep, terracotta for awake time and feeds, s
 | terra | `#B0583A` | awake, active feed side |
 | terra-text | `#93452B` | terracotta text on light |
 | peach | `#F6D9C3` | "Woke up" button on asleep screen |
-| night-bg | `#0B0807` | night mode background |
-| night-text | `#E9A48C` / `#B9785F` | night mode text (dim, warm, no blue light) |
+| night-bg | `#0B0807` | night colors background |
+| night-text | `#E9A48C` / `#B9785F` | night colors text (dim, warm, no blue light) |
+
+`client/src/app.css` is the style sheet: every color is a token there, with its night value under `:root.night-theme`. Screens use tokens only — no hex values in components — so the night colors reach every screen. Night has no green, no shadows, and text pairs keep WCAG AA contrast in both themes.
 
 Type: **Fraunces** (headings, big numbers, primary buttons), **Nunito Sans** (everything else, 600–800 weight). Radii: cards 24–26px, big buttons 30px, chips fully round. Icons: thin stroke inline SVG (1.7px), no emoji.
 
 ## Screens
 
-1. **Now (awake)** — awake-since + big duration, wake-window progress bar with the target nap/bedtime window, big **Start sleep** button (says **Start night** when `IsNight` default is true), Feed / Solids / Note tiles, today strip (24h bar of sleeps and feeds). Tabs: Now, Day, Insights.
-2. **Now (asleep)** — moss-deep background, running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep (editable while sleeping), big **Woke up** button, "Adjust start time". Moon icon → Night mode.
+1. **Now (awake)** — awake-since + big duration, wake-window progress bar with the target nap/bedtime window, big **Start nap** button (says **Start night** when `IsNight` default is true), Feed / Solids / Note tiles, today strip (24h bar of sleeps and feeds). Tabs: Now, Day, Insights.
+2. **Now (asleep)** — moss-deep background (near-black at night), running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep (editable while sleeping), "Adjust start time". A nap is plain stop/start: big **Woke up** ends it; a feed afterwards is its own event, and falling back asleep is another nap. A night has big **She's awake** (starts a NightWaking) and **Up for the day**. During a waking the same screen shows the awake-for timer, big **Feed** plus Solids / Note (the normal screens), then **Back asleep**: one button settling "by feeding" if she fed during the waking, otherwise Soothing / On her own. The Feed screen has **Asleep** during a waking, which saves the feed and closes the waking in one tap. No nap/night toggle here.
 3. **Woke-up sheet** — saved duration, editable start/end time buttons, wake mood chips, next sleep window callout, Done.
-4. **Night mode** — near-black, dim warm text. When asleep: big "She's awake" button (starts a NightWaking). During a waking: awake-for timer and three huge buttons for SettledBy (Feeding / Soothing / On her own) which close the waking. "Up for the day" ends the night sleep. Auto-suggest night mode between 19:00–06:00.
+4. **Night colors** — no separate night mode. From bedtime to morning, and while a night sleep runs, the whole app switches to near-black with dim warm text (the `night-theme` class on `<html>` remaps the color tokens).
 5. **Feed** — Nursing/Bottle toggle. Nursing: two big round Left/Right buttons; tap starts that side, tap again pauses, tap the other side switches; live per-side and total time; "last feed started on X · Nh ago"; −1/+1 min and start-time adjust; Done saves. Bottle: oz stepper.
 6. **Solids** — search/add field (typing a new name offers "+ Add 'Mango'"), Recents chips, category tabs with preset chips (multi-select), optional amount (A taste / Some / All of it), Save with count.
 7. **Day** — date switcher, totals (sleep, naps, feeds), chronological list: sleep blocks (moss), awake gaps shown as wake windows (terracotta line + "Awake 2h 30m"), feed/solids rows with details. Tap any row to edit or delete.
 8. **Insights** — longest night stretch by month (from imported feed history + new sleep data), avg bedtime and spread (7 days), night wakings per night and how settled, the "best last wake window" pattern card (needs ~14 days of data; show "unlocks after…" until then). Link to **Growth**.
 9. **Growth** — weight, length, head charts over time (optional WHO girls percentile bands), list of measurements, "Add measurement".
 
-Wake-window logic: awake time = now − end of the last sleep. Target comes from Settings by nap index for the day; show the window as target ± 10 min. Keep it all client-side.
+Wake-window logic: awake time = now − end of the last sleep. Target comes from Settings (before a nap, or before bed once the day's naps are done or no nap fits before the latest bedtime); show a nap's window as target ± 10 min; bedtime is the bedtime setting. Keep it all client-side.
 
 ## Nara import (`/tools/nara-import`)
 
@@ -134,7 +136,7 @@ Input: `export_narababy_<name>_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)` 
 | Breastfeed | Event Feed/Nursing | `LeftSeconds`/`RightSeconds` from the duration columns (blank = 0); `StartSide` from Begin Side; strip `.nonTimer` suffixes; `End = Start + Left + Right` |
 | Bottle Feed | Event Feed/Bottle | `BottleOz` from Breast Milk Volume, else Volume (unit FLOZ) |
 | Solid Feed | Event Solids | Foods: split on newline; each entry may look like `Cereal: amountKey=ALL; reactionKey=LOVE` — name before `:`; `amountKey` LITTLE→Taste, ALL→All. Upsert each name into Food (Category from a small map; unknown → Other) |
-| Sleep | Event Sleep | End from Sleep End (Epoch); `IsNight` by the default rule |
+| Sleep | Event Sleep | End from Sleep End (Epoch); `IsNight` by the default rule (with the default settings) |
 | Growth | Growth | IN→cm (×2.54), LB→kg (×0.45359237) |
 | Note column | `Text` | if present |
 | Diaper, Pump, Milestone, Profile | skip | |
@@ -146,7 +148,7 @@ Nara's columns carry a type prefix (`[Sleep] End Date/time (Epoch)`, `[Growth] W
 1. Server: entities, ModifiedAt stamping event, sync-safe query (bypass IsDeleted filter), two users + built-in login (access/refresh), serve the PWA from the same origin.
 2. Client shell: PWA manifest + precache, fonts, tokens, tab layout, Dexie schema.
 3. Sync engine (outbox, push, pull) with a tiny debug panel in settings.
-4. Sleep flow: Now (awake/asleep), Woke sheet, Night mode.
+4. Sleep flow: Now (awake/asleep), Woke sheet, night colors.
 5. Feed timer, Solids, Notes.
 6. Day view with edit/delete.
 7. Nara import; verify counts.

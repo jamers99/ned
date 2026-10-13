@@ -6,13 +6,13 @@
   import { settingsGuid } from '../lib/ids.ts';
   import { diagnostics } from '../lib/diagnostics.svelte.ts';
   import { close, open } from '../lib/nav.svelte.ts';
-  import { defaultTargets } from '../lib/sleep.ts';
+  import { targetsFrom, type SleepTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
   import { syncNow } from '../lib/sync.ts';
   import { atMinuteOfDay, clock as clockTime, duration, minute } from '../lib/time.ts';
 
   const row = live(() => db.settings.get(settingsGuid), undefined as Settings | undefined);
-  const targets = $derived(row.value ?? defaultTargets);
+  const targets = $derived(targetsFrom(row.value));
 
   // The debug panel: what is waiting to push and how far each table has pulled.
   const tables = live(() => Promise.all(syncedTables.map(async table => ({
@@ -22,20 +22,28 @@
     cursor: (await getMeta<number>(`cursor:${table}`)) ?? 0
   }))), []);
 
-  type Target = 'Nap1WakeWindowMinutes' | 'Nap2WakeWindowMinutes' | 'BedtimeWakeWindowMinutes'
-    | 'BedtimeEarliestMinutes' | 'BedtimeLatestMinutes' | 'NapsPerDay';
+  type Target = keyof SleepTargets;
+  const time = (v: number) => clockTime(atMinuteOfDay(0, v));
+  const length = (v: number) => duration(v * minute);
 
-  const rows: { key: Target; label: string; step: number; show: (v: number) => string }[] = [
-    { key: 'Nap1WakeWindowMinutes', label: 'Before nap 1', step: 5, show: v => duration(v * minute) },
-    { key: 'Nap2WakeWindowMinutes', label: 'Before later naps', step: 5, show: v => duration(v * minute) },
-    { key: 'BedtimeWakeWindowMinutes', label: 'Before bed', step: 5, show: v => duration(v * minute) },
-    { key: 'NapsPerDay', label: 'Naps per day', step: 1, show: v => String(v) },
-    { key: 'BedtimeEarliestMinutes', label: 'Earliest bedtime', step: 15, show: v => clockTime(atMinuteOfDay(0, v)) },
-    { key: 'BedtimeLatestMinutes', label: 'Latest bedtime', step: 15, show: v => clockTime(atMinuteOfDay(0, v)) }
+  const rows: { key: Target; label: string; help?: string; step: number; show: (v: number) => string }[] = [
+    { key: 'NapsPerDay', label: 'Naps a day', step: 1, show: String },
+    { key: 'NapWakeWindowMinutes', label: 'Awake before a nap', step: 5, show: length,
+      help: 'How long she can stay up before a nap.' },
+    { key: 'BedtimeWakeWindowMinutes', label: 'Awake before bed', step: 5, show: length,
+      help: 'How long she can stay up after her last nap before bed.' },
+    { key: 'NightStartMinutes', label: 'Bedtime', step: 15, show: time,
+      help: 'When she usually goes down for the night.' },
+    { key: 'NightEndMinutes', label: 'Morning', step: 15, show: time,
+      help: 'When she usually starts the day.' }
   ];
 
+  const isTime = (key: Target) => key === 'NightStartMinutes' || key === 'NightEndMinutes';
+
   function step(key: Target, by: number) {
-    void updateSettings({ [key]: Math.max(key === 'NapsPerDay' ? 0 : 5, targets[key] + by) });
+    const value = targets[key] + by;
+    const day = 24 * 60;
+    void updateSettings({ [key]: isTime(key) ? (value + day) % day : Math.max(key === 'NapsPerDay' ? 0 : 5, value) });
   }
 
   async function leave() {
@@ -47,13 +55,19 @@
 
 <Overlay title="Settings">
   <section class="card list">
-    <div class="eyebrow">Wake windows</div>
-    {#each rows as { key, label, step: size, show } (key)}
-      <div class="row">
-        <span>{label}</span>
-        <button class="round-button" aria-label="{label} less" onclick={() => step(key, -size)}>−</button>
-        <span class="value serif">{show(targets[key])}</span>
-        <button class="round-button" aria-label="{label} more" onclick={() => step(key, size)}>+</button>
+    <div>
+      <div class="eyebrow">Her sleep plan</div>
+      <p class="help">Used to suggest when her next nap or bedtime is.</p>
+    </div>
+    {#each rows as { key, label, help, step: size, show } (key)}
+      <div class="setting">
+        <div class="row">
+          <span>{label}</span>
+          <button class="round-button" aria-label="{label} less" onclick={() => step(key, -size)}>−</button>
+          <span class="value serif">{show(targets[key])}</span>
+          <button class="round-button" aria-label="{label} more" onclick={() => step(key, size)}>+</button>
+        </div>
+        {#if help}<p class="help">{help}</p>{/if}
       </div>
     {/each}
   </section>
@@ -123,6 +137,19 @@
 
   .row > span:first-child {
     flex: 1;
+  }
+
+  .setting + .setting {
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .help {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    line-height: 1.35;
   }
 
   .value {

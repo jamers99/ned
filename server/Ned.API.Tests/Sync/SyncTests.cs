@@ -57,7 +57,7 @@ public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
         {
             ("Growth", new JsonObject { ["MeasuredAt"] = "2026-09-18T14:00:00Z", ["WeightKg"] = 6.917, ["HeadCm"] = 43.18 }),
             ("Food", new JsonObject { ["Name"] = $"Mango {Guid.NewGuid():N}", ["Category"] = "Fruit", ["UseCount"] = 1 }),
-            ("Settings", new JsonObject { ["NapsPerDay"] = 2, ["Nap1WakeWindowMinutes"] = 150 }),
+            ("Settings", new JsonObject { ["NapsPerDay"] = 2, ["NapWakeWindowMinutes"] = 150 }),
             ("Event", new JsonObject { ["Type"] = "Solids", ["Start"] = "2026-09-20T16:30:00Z", ["Foods"] = "Cereal\nPear" })
         };
 

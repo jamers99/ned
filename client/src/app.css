@@ -15,31 +15,94 @@
 }
 
 :root {
-  --ground: #F4EEE3;
-  --surface: #FCF9F3;
-  --line: #E3D8C6;
-  --ink: #3A2F25;
-  --muted: #6E6152;
-  --moss: #56654A;
-  --moss-deep: #3E4A35;
-  --moss-soft: #E4E7D7;
-  --moss-pale: #B9C3A8;
-  --moss-mist: #D3DAC5;
-  --terra: #B0583A;
-  --terra-text: #93452B;
-  --peach: #F6D9C3;
-  --track: #EDE4D5;
-  --night-bg: #0B0807;
-  --night-text: #E9A48C;
-  --night-dim: #B9785F;
-  --night-button: #1C1310;
-  --night-line: #3A2620;
+  /* Ground and text */
+  --ground: #F4EEE3;          /* app background */
+  --surface: #FCF9F3;         /* cards, buttons */
+  --track: #EDE4D5;           /* empty bars, segmented controls */
+  --line: #E3D8C6;            /* borders */
+  --line-strong: #D3C5AF;     /* dashed borders */
+  --ink: #3A2F25;             /* text, primary dark button */
+  --muted: #6E6152;           /* secondary text */
+  --placeholder: #7D6F5F;
+
+  /* Moss: sleep */
+  --moss: #56654A;            /* sleep blocks, sleep buttons and selected chips */
+  --on-moss: #FCF9F3;         /* text on moss */
+  --on-moss-soft: #DDE3D0;    /* secondary text on moss */
+  --moss-nap: #8E9B7D;        /* naps in the today strip */
+  --moss-deep: #3E4A35;       /* sleep text on light */
+  --moss-soft: #E4E7D7;       /* sleep callouts */
+  --on-moss-callout: #2F3828; /* text in a sleep callout */
+  --moss-callout-note: #4E5B43;
+  --moss-bar: #C3CBB3;        /* older bars in charts */
+  --moss-pale: #B9C3A8;       /* wake-window target on the bar; dim text when asleep */
+  --moss-mist: #D3DAC5;       /* secondary text when asleep */
+  --button-shadow: 0 8px 22px rgba(62, 74, 53, 0.25);
+
+  /* Terracotta: awake time and feeds */
+  --terra: #B0583A;           /* awake, active feed side */
+  --terra-text: #93452B;      /* terracotta text on light */
+  --terra-soft: #C98A6C;      /* wake-window line in the Day view */
+  --feed-shadow: 0 10px 26px rgba(176, 88, 58, 0.35);
+  --peach: #F6D9C3;           /* Woke up / She's awake button */
+  --peach-text: #5A2E1C;
+
+  /* The asleep screen: light text on deep moss */
+  --sleep-bg: var(--moss-deep);
+  --on-sleep: #FCF9F3;
+  --sleep-tint: rgba(252, 249, 243, 0.08);
+  --sleep-line: rgba(252, 249, 243, 0.12);
+  --sleep-edge: rgba(252, 249, 243, 0.3);
+  --scrim: rgba(58, 47, 37, 0.45);
 
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Nunito Sans', system-ui, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --quick: 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * From bedtime to morning every screen goes near-black with dim warm text: no blue light, no green, no glow.
+ * Each token keeps its job; only the value changes. Moss becomes a dim brown, so sleep stays visible.
+ */
+:root.night-theme {
+  --ground: #0B0807;
+  --surface: #1C1310;
+  --track: #1C1310;
+  --line: #3A2620;
+  --line-strong: #4A3028;
+  --ink: #E9A48C;
+  --muted: #B9785F;
+  --placeholder: #A27663;
+
+  --moss: #5A3A2D;
+  --on-moss: #F0B39D;
+  --on-moss-soft: #E0AC97;
+  --moss-nap: #4A3027;
+  --moss-deep: #D9A08A;
+  --moss-soft: #241915;
+  --on-moss-callout: #E9A48C;
+  --moss-callout-note: #B9785F;
+  --moss-bar: #3A2620;
+  --moss-pale: #6E4A3A;
+  --moss-mist: #B9785F;
+  --button-shadow: none;
+
+  --terra: #B9785F;
+  --terra-text: #E9A48C;
+  --terra-soft: #7A4A38;
+  --feed-shadow: none;
+  --peach: #241915;
+  --peach-text: #F0B39D;
+
+  --sleep-bg: #0B0807;
+  --on-sleep: #E9A48C;
+  --sleep-tint: #140E0C;
+  --sleep-line: #3A2620;
+  --sleep-edge: #3A2620;
+  --scrim: rgba(0, 0, 0, 0.6);
+  color: var(--ink);
 }
 
 *,
@@ -250,4 +313,10 @@ button:disabled {
   font-family: var(--serif);
   font-size: 22px;
   font-weight: 600;
+}
+
+:root.night-theme .primary-dark {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--on-moss);
 }

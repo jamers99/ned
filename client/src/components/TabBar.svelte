@@ -57,8 +57,8 @@
   }
 
   nav.dark {
-    background: var(--moss-deep);
-    border-top-color: rgba(252, 249, 243, 0.12);
+    background: var(--sleep-bg);
+    border-top-color: var(--sleep-line);
   }
 
   nav.dark button {
@@ -66,6 +66,6 @@
   }
 
   nav.dark button.active {
-    color: var(--surface);
+    color: var(--on-sleep);
   }
 </style>
