@@ -3,10 +3,10 @@
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, endFeed, startRunning, updateEvent } from '../lib/actions.ts';
+  import { addEvent, deleteEvent, endFeed, startRunning, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
   import { locationText, nursedSeconds, onsetChoices, settleChoices } from '../lib/describe.ts';
-  import { open } from '../lib/nav.svelte.ts';
+  import { closeAll, open } from '../lib/nav.svelte.ts';
   import {
     askStillAsleep, latestRunning, napNumber, pastWaking, timeAsleep, typicalNapRange, wakingsDuring
   } from '../lib/sleep.ts';
@@ -60,6 +60,19 @@
   function keepSleeping() {
     stillAsleep.guid = sleep!.Guid;
     stillAsleep.at = Date.now();
+  }
+
+  /**
+   * A sleep started by mistake: deleted, with any wakings logged in it. Feeds stay; they happened.
+   * Asks first unless it was only just started.
+   */
+  function cancelSleep() {
+    if (!sleep) return;
+    if (Date.now() - sleep.Start > 5 * minute && !confirm(`Cancel this ${sleep.IsNight ? 'night' : 'nap'}? It won't be saved.`))
+      return;
+    for (const w of wakings) void deleteEvent(w.Guid);
+    void deleteEvent(sleep.Guid);
+    closeAll();
   }
 
   const earlier = (start: number) => (start > Date.now() ? start - day : start);
@@ -218,6 +231,10 @@
       <Icon name="sun" size={20} stroke="currentColor" width={1.8} />
       Up for the day
     </button>
+  {/if}
+
+  {#if sleep && !waking}
+    <button class="cancel" onclick={cancelSleep}>Started by mistake? Cancel {sleep.IsNight ? 'night' : 'nap'}</button>
   {/if}
 </Overlay>
 
@@ -389,6 +406,15 @@
   }
 
   .up {
+    color: var(--muted);
+  }
+
+  .cancel {
+    min-height: 44px;
+    border: 0;
+    background: none;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--muted);
   }
 </style>
