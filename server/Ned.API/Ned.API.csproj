@@ -7,9 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="Benevia.Core.API.Events" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.API.Workflows" Version="$(BeneviaCoreVersion)" />
     <PackageReference Include="Benevia.Core.API.Postgres" Version="$(BeneviaCoreVersion)" />
     <PackageReference Include="Benevia.Core.DataGenerator" Version="$(BeneviaCoreVersion)" />
     <PackageReference Include="Benevia.Core.Events.DataTypes" Version="$(BeneviaCoreVersion)" />
+    <PackageReference Include="Benevia.Core.MCP" Version="$(BeneviaCoreVersion)" />
     <PackageReference Include="Benevia.Core.Postgres" Version="$(BeneviaCoreVersion)" />
     <PackageReference Include="Benevia.Core.API.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="Benevia.Core.API.Postgres.Generator" Version="$(BeneviaCoreVersion)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
@@ -19,6 +21,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Ned.API.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Mcp\consent.html;Mcp\consent.js" />
   </ItemGroup>
 
   <ItemGroup>

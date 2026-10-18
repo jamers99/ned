@@ -3,9 +3,17 @@ using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Ned.API.Tests;
+
+/// <summary>
+/// The test classes share one API, since each new one would recreate the database under the others.
+/// </summary>
+[CollectionDefinition(nameof(NedApiFactory))]
+public class NedApiCollection : ICollectionFixture<NedApiFactory>;
 
 /// <summary>
 /// Runs the API against a throwaway PostgreSQL database that is recreated for each test run.
@@ -27,6 +35,9 @@ public class NedApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Tenants:Ned:ConnectionString", ConnectionString);
+        // The MCP tools call the API over HTTP; in tests there's no socket, so route them into the test server.
+        builder.ConfigureTestServices(services =>
+            services.AddHttpClient("BeneviaOData").ConfigurePrimaryHttpMessageHandler(() => Server.CreateHandler()));
     }
 
     /// <summary>

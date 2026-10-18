@@ -40,6 +40,19 @@ To set it up the first time, sign in with `az login` and `gh auth login`, then r
 
 On each phone, open the site, choose **Add to Home Screen**, and sign in from the installed app. On iPhone, the installed app keeps its own storage, separate from Safari.
 
+## Connect Claude
+
+Claude can read Ned's data and log entries over MCP. In the Claude app, open **Settings → Connectors → Add custom connector** and enter `https://ned-baby.azurewebsites.net/mcp`. Claude opens a Ned page: sign in as one of the parents and choose **Allow**. Uncheck **Also let it log and edit entries** for read-only access.
+
+This needs two app settings, which `./setup.sh` creates. To add them to an app set up before Ned had MCP:
+
+```bash
+az webapp config appsettings set --resource-group rg-ned --name ned-baby --output none --settings \
+  "OAuth__Secret=$(openssl rand -hex 32)" OAuth__PublicOrigin=https://ned-baby.azurewebsites.net
+```
+
+Without `OAuth__Secret`, MCP is off and the rest of Ned works as before. Changing the secret disconnects Claude, which then asks to sign in again. Locally, OAuth only works over HTTPS, so try a connector through a tunnel (e.g. `ngrok http 5205`) with `OAuth__PublicOrigin` set to the tunnel's URL.
+
 ## Import from Nara
 
 Export the CSV from Nara (Activity → tap the avatar → Export Data) and check it with a dry run:

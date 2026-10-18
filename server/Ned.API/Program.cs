@@ -6,6 +6,7 @@ using Benevia.Core.Events;
 using Benevia.Core.Postgres;
 using Benevia.Core.Postgres.Model;
 using Ned.API;
+using Ned.API.Mcp;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,7 @@ builder.Services
         apiOptions: o => o.MaxODataBatchParts = 200,
         // Phones should stay signed in. Each refresh issues a new token with a fresh 90 days.
         jwtOptions: o => o.RefreshTokenExpirationDays = 90);
+var mcp = builder.AddNedMcp();
 
 var app = builder.Build();
 app.Services.UseBusinessLogicEvents();
@@ -44,6 +46,8 @@ app.Use(async (context, next) =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+if (mcp)
+    app.UseNedMcp();
 await app.UseCoreApi();
 app.Run();
 
