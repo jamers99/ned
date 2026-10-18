@@ -6,6 +6,7 @@
   import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
   import { settingsGuid } from '../lib/ids.ts';
   import { diagnostics } from '../lib/diagnostics.svelte.ts';
+  import { exportData } from '../lib/export.ts';
   import { close, open } from '../lib/nav.svelte.ts';
   import { targetsFrom, type SleepTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
@@ -99,6 +100,14 @@
       </tbody>
     </table>
     <button class="chip" onclick={() => syncNow()}>Sync now</button>
+  </section>
+
+  <section class="card list">
+    <div>
+      <div class="eyebrow">Your data</div>
+      <p class="help">Everything logged on this phone as a CSV file, for a spreadsheet or another app.</p>
+    </div>
+    <button class="chip" onclick={() => exportData()}>Export data</button>
   </section>
 
   <section class="card list">

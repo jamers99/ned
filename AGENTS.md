@@ -52,6 +52,8 @@ Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are
 
 **Settings** (local + synced single row with a fixed `Guid`) — naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
 
+**Export** — Settings' **Export data** writes everything on the phone (deleted rows left out) to one CSV for a spreadsheet or another app: one row per event, growth measurement and food, oldest first, each time in local ISO with its offset and in UTC (`client/src/lib/export.ts`). It goes to the share sheet where the phone has one, otherwise downloads.
+
 ## Sync
 
 The client owns an outbox. Server is a dumb, reliable store.
