@@ -97,6 +97,15 @@ test.describe(() => {
 });
 
 test.describe(() => {
+  test.use({ user: 'Natalie' });
+
+  test('sync needs attention', async ({ app, page }) => {
+    await page.getByRole('button', { name: /^Not synced/ }).waitFor();
+    await camera(app, 'day')('now-not-synced');
+  });
+});
+
+test.describe(() => {
   test.use({ seeded: false });
 
   test('sign in', async ({ app }) => {

@@ -11,7 +11,8 @@
     askStillAsleep, isNightTime, latestRunning, napNumber, nextSleep, timeAsleep, typicalNapRange, wakingsDuring,
     type SleepTargets
   } from '../lib/sleep.ts';
-  import { clock, stillAsleep } from '../lib/state.svelte.ts';
+  import { clock, live, status, stillAsleep } from '../lib/state.svelte.ts';
+  import { lastSyncedText, oldestUnpushed, syncIsStale } from '../lib/sync.ts';
   import { clockShort, clock as clockTime, duration, longDate, minute, stopwatch } from '../lib/time.ts';
 
   // Sleep and feeds weigh the same here: two big buttons, each opening its drawer and showing when it's running.
@@ -38,6 +39,11 @@
   const lastSolids = $derived(events.filter(e => e.Type === 'Solids').at(-1));
   const ago = (at: number) => (now - at < minute ? 'just now' : `${duration(now - at)} ago`);
 
+  // A quiet cloud beside Settings that only stands out when the other phone may be missing something.
+  const unpushed = live(oldestUnpushed, null);
+  const stale = $derived(syncIsStale(unpushed.value, now));
+  const synced = $derived(lastSyncedText(now));
+
   // One tap starts the sleep at now; the drawer that opens can move its start earlier, like Feed's.
   async function sleepTapped() {
     if (!sleeping) await startRunning({ Type: 'Sleep', Start: Date.now(), IsNight: isNightTime(Date.now(), targets) });
@@ -54,9 +60,18 @@
         <Icon name="sprig" size={24} stroke="var(--moss)" width={1.5} />
       </div>
     </div>
-    <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
-      <Icon name="sliders" size={20} />
-    </button>
+    <div class="header-buttons">
+      {#if status.user}
+        <button class="sync" class:stale aria-label={stale ? `Not synced. ${synced}` : synced}
+          onclick={() => open({ kind: 'settings' })}>
+          <Icon name="cloud" size={18} width={stale ? 2 : 1.5} />
+          {#if stale}<span class="stale-dot"></span>{/if}
+        </button>
+      {/if}
+      <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
+        <Icon name="sliders" size={20} />
+      </button>
+    </div>
   </header>
 
   {#if sleeping}
@@ -166,6 +181,39 @@
     font-size: 30px;
     font-weight: 600;
     letter-spacing: -0.01em;
+  }
+
+  .header-buttons {
+    display: flex;
+    align-items: center;
+  }
+
+  .sync {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+  }
+
+  .sync.stale {
+    opacity: 1;
+    color: var(--terra-text);
+  }
+
+  .stale-dot {
+    position: absolute;
+    top: 10px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--terra);
   }
 
   .status {
