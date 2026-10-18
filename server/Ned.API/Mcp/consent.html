@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Connect to Ned</title>
+  <style>
+    /* Ned's linen and ink, without the app's fonts: this page only shows when connecting an AI app. */
+    :root {
+      --ground: #F4EEE3;
+      --surface: #FCF9F3;
+      --line: #E3D8C6;
+      --ink: #3A2F25;
+      --muted: #6E6152;
+      --moss: #56654A;
+      --terra-text: #93452B;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--ground);
+      color: var(--ink);
+      font: 600 16px/1.45 system-ui, sans-serif;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    h1 { margin: 0; font: 600 26px/1.2 Georgia, serif; }
+    p { margin: 0; color: var(--muted); }
+    form, section { display: flex; flex-direction: column; gap: 12px; }
+    [hidden] { display: none; }
+
+    input[type=text], input[type=password] {
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0 14px;
+      font: inherit;
+      color: var(--ink);
+      background: var(--ground);
+    }
+
+    label.check { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+    input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--moss); }
+
+    button {
+      min-height: 52px;
+      border-radius: 30px;
+      border: 1px solid var(--line);
+      font: 600 17px/1 Georgia, serif;
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    button.primary { background: var(--moss); border-color: var(--moss); color: var(--surface); }
+    .error { color: var(--terra-text); }
+  </style>
+  <script src="/oauth/consent.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>Connect to Ned</h1>
+
+    <form id="sign-in" hidden>
+      <p>Sign in with your Ned account to continue.</p>
+      <input id="username" type="text" autocomplete="username" autocapitalize="none" placeholder="Name" required>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Password" required>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+
+    <section id="consent" hidden>
+      <p><strong id="client">An app</strong> would like to see your baby's sleep, feeds, solids, notes and growth.</p>
+      <label class="check"><input id="write" type="checkbox" checked> Also let it log and edit entries</label>
+      <button class="primary" id="allow" type="button">Allow</button>
+      <button id="deny" type="button">Don't allow</button>
+    </section>
+
+    <p class="error" id="error" role="alert"></p>
+  </main>
+</body>
+</html>

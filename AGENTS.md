@@ -65,7 +65,7 @@ The client owns an outbox. Server is a dumb, reliable store.
 
 ## Auth
 
-Use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is for AI clients and third-party apps; don't use OAuth here. Read the framework's auth code for the exact endpoints and how it returns tokens.
+The phones use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is only for AI apps connecting over MCP (below); don't use OAuth in the phones. Read the framework's auth code for the exact endpoints and how it returns tokens.
 
 - **Users:** one Benevia user per parent. Give both one role with full access to Event, Growth, Food and Settings. No other RBAC.
 - **Sign in once per phone:** a first-run screen with username + password, plus **Try it without an account** (a `guest` meta flag: nothing syncs, everything stays on the phone; signing in later from Settings syncs it all). After that, the user should never see a login again unless they sign out or the refresh token is revoked.
@@ -77,6 +77,15 @@ Use Benevia Core's built-in login (access token + refresh token). This is NOT th
 - **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
 - **iPhone note:** a home-screen app has its own storage, separate from Safari. Users must sign in from inside the installed app.
 - **Sign out:** clear tokens only. Ask before also clearing local data.
+
+## MCP (AI apps)
+
+An AI app such as Claude connects to `https://<host>/mcp` as a custom connector, mainly to answer questions about the data and sometimes to log entries. `server/Ned.API/Mcp/NedMcp.cs` wires up Core's MCP server (`Benevia.Core.MCP`: generic OData tools that stage writes in a Core workflow and apply them when the user approves) and Core's OAuth.
+
+- **On only with a secret:** MCP and OAuth are added when `OAuth:Secret` is set; outside Development `OAuth:PublicOrigin` is required with it, since Azure's proxy hides the https address.
+- **Sign-in:** OAuth sends the browser to `/oauth/consent` (`Mcp/consent.html` + `consent.js`, served by the server, not the PWA): sign in as a parent, then Allow. It grants read, and write if left checked, never Core's delete scope: Ned deletes softly so the other phone hears about it. The PWA's service worker must not answer `/connect/` or `/oauth/` navigations.
+- **Keep the phone's logic on the phone.** The UI stays offline-first; the server only fills in what an app can't: `LoggedBy` defaults to the signed-in parent when empty (also for rows logged before signing in), and a Solids event logged by a connected app counts its foods in Food (same UUIDv5 as the phones). Phones count their own foods, so the server leaves their solids alone.
+- **Agent instructions:** `NedMcp.AppInstructions`, appended to Core's rules. Clients cut the whole block at 2,048 bytes, so keep it under ~800 bytes; derived rules an agent must follow (IsNight from the night range, soft deletes) go there.
 
 ## Performance rules (client)
 
