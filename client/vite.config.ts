@@ -29,7 +29,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallbackDenylist: [/^\/api\//]
+        // The server answers these itself, including OAuth's pages when an AI app connects.
+        navigateFallbackDenylist: [/^\/api\//, /^\/connect\//, /^\/oauth\//, /^\/mcp/]
       }
     })
   ],
