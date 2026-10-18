@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { newEvent } from './actions.ts';
 import { db, setMeta, type BabyEvent } from './db.ts';
 import { status } from './state.svelte.ts';
-import { abandonSync, syncNow } from './sync.ts';
+import { abandonSync, oldestUnpushed, syncIsStale, syncNow } from './sync.ts';
 
 /** Just enough of the Benevia API: rotating refresh, upserts in $batch, and pulls by ModifiedAt. */
 class FakeServer {
@@ -57,6 +57,7 @@ beforeEach(async () => {
   await setMeta('refreshToken', 'first');
   status.user = 'John';
   status.needsSignIn = false;
+  status.error = '';
   server = new FakeServer();
   vi.stubGlobal('fetch', server.fetch);
 });
@@ -132,5 +133,21 @@ describe('sync', () => {
 
     expect(status.needsSignIn).toBe(true);
     expect(await db.events.get(local.Guid)).toMatchObject({ dirty: 1 });
+  });
+
+  it('stands out only when a change has waited an hour, or the phone has not synced in an hour', async () => {
+    const now = Date.UTC(2026, 9, 11, 12);
+    const hourAgo = now - 61 * 60_000;
+    await db.events.bulkAdd([{ ...sleep(), dirty: hourAgo }, { ...sleep(), dirty: now }, { ...sleep(), dirty: 0 }]);
+    expect(await oldestUnpushed()).toBe(hourAgo);
+
+    // Opening the app after a quiet night: nothing to worry about until a sync has had its chance and failed.
+    status.lastSyncedAt = hourAgo;
+    expect(syncIsStale(hourAgo, now)).toBe(false);
+    status.error = 'Load failed';
+    expect(syncIsStale(hourAgo, now)).toBe(true);
+    status.lastSyncedAt = now - 60_000;
+    expect(syncIsStale(now - 60_000, now)).toBe(false);
+    expect(syncIsStale(hourAgo, now)).toBe(true);
   });
 });

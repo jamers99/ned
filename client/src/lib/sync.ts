@@ -1,6 +1,7 @@
 import { db, getMeta, setMeta, syncedTable, syncedTables, type Synced, type SyncedTable } from './db.ts';
 import { apiFetch, errorText, messageFrom, SignInRequired } from './auth.ts';
 import { status } from './state.svelte.ts';
+import { clock, mediumDate, startOfDay } from './time.ts';
 import { entitySets, fields, fromServer, parseInstant, toServer } from './wire.ts';
 
 const batchLimit = 200;
@@ -11,6 +12,8 @@ const syncTimeout = 30_000;
 // Rows are stamped before their transaction commits, so a slow save can land just behind the cursor.
 // Re-reading a minute of overlap catches it; unchanged rows are skipped.
 const pullOverlap = 60_000;
+// How long the phone can go without syncing before the indicator in the tab bar asks for attention.
+const staleAfter = 60 * 60_000;
 
 let running: Promise<void> | null = null;
 let currentRun: AbortController | null = null;
@@ -56,6 +59,7 @@ async function pushThenPull() {
     failures = 0;
     status.lastSyncedAt = Date.now();
     status.error = '';
+    await setMeta('lastSyncedAt', status.lastSyncedAt);
   } catch (error) {
     status.error = run.signal.aborted ? 'The connection stalled. Retrying.'
       : error instanceof Error ? error.message : String(error);
@@ -70,6 +74,32 @@ async function pushThenPull() {
     clearTimeout(timeout);
     status.syncing = false;
   }
+}
+
+/**
+ * Whether the sync indicator should stand out: a change has waited over an hour to reach the server, or the
+ * phone hasn't heard from it in an hour. Only once a sync has failed, so opening the app after a quiet night
+ * doesn't flash a warning before the first sync has had its chance.
+ */
+export function syncIsStale(unpushedSince: number | null, now: number): boolean {
+  if (status.needsSignIn) return true;
+  if (!status.error) return false;
+  return (unpushedSince != null && now - unpushedSince > staleAfter) || now - status.lastSyncedAt > staleAfter;
+}
+
+/** "Synced at 9:41 AM", "Synced Thursday, Oct 8 at 9:41 AM", or "Not synced yet". */
+export function lastSyncedText(now: number): string {
+  const at = status.lastSyncedAt;
+  if (!at) return 'Not synced yet';
+  return `Synced ${at < startOfDay(now) ? `${mediumDate(at)} ` : ''}at ${clock(at)}`;
+}
+
+/** When the oldest change still waiting to be pushed was made, or null when everything is pushed. */
+export async function oldestUnpushed(): Promise<number | null> {
+  const stamps = await Promise.all(syncedTables.map(async table =>
+    (await syncedTable(table).where('dirty').above(0).first())?.dirty));
+  const pending = stamps.filter(stamp => stamp != null);
+  return pending.length ? Math.min(...pending) : null;
 }
 
 interface Pending {

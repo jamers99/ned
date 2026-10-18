@@ -24,6 +24,7 @@ export class SignInRequired extends Error {
 export async function loadUser() {
   status.user = (await getMeta<string>('user')) ?? '';
   status.guest = (await getMeta<boolean>('guest')) ?? false;
+  status.lastSyncedAt = (await getMeta<number>('lastSyncedAt')) ?? 0;
 }
 
 /** Uses the app without an account. Signing in later keeps everything logged so far and syncs it. */

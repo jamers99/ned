@@ -9,7 +9,7 @@
   import { close, open } from '../lib/nav.svelte.ts';
   import { targetsFrom, type SleepTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
-  import { syncNow } from '../lib/sync.ts';
+  import { lastSyncedText, syncNow } from '../lib/sync.ts';
   import { atMinuteOfDay, clock as clockTime, duration, minute } from '../lib/time.ts';
 
   const row = live(() => db.settings.get(settingsGuid), undefined as Settings | undefined);
@@ -81,7 +81,7 @@
       {:else if status.needsSignIn}
         Signed out — <button class="inline" onclick={() => open({ kind: 'signin' })}>sign in to sync</button>
       {:else}
-        {status.syncing ? 'Syncing…' : status.lastSyncedAt ? `Synced at ${clockTime(status.lastSyncedAt)}` : 'Not synced yet'}
+        {status.syncing ? 'Syncing…' : lastSyncedText(Date.now())}
       {/if}
     </div>
     {#if status.error}<div class="error">{status.error}</div>{/if}
