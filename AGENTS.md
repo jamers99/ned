@@ -52,6 +52,8 @@ Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are
 
 **Settings** (local + synced single row with a fixed `Guid`) — naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
 
+**Export** — Settings' **Export data** writes everything on the phone (deleted rows left out) to one CSV for a spreadsheet or another app: one row per event, growth measurement and food, oldest first, each time in local ISO with its offset and in UTC (`client/src/lib/export.ts`). It goes to the share sheet where the phone has one, otherwise downloads.
+
 ## Sync
 
 The client owns an outbox. Server is a dumb, reliable store.
@@ -62,6 +64,7 @@ The client owns an outbox. Server is a dumb, reliable store.
 4. **Deletes are soft:** set `Deleted = true` and push. ⚠️ There is deliberately **no** global query filter on `Deleted`, so the standard OData pull returns deleted rows and deletions reach the other phone. Don't add one; filter on the phone instead.
 5. **Conflicts:** last write (server `ModifiedAt`) wins. Two users, rarely editing the same row — keep it simple.
 6. A running timer is just a row with `End = null`, so the other phone sees it after the next sync.
+7. **Sync indicator:** a quiet cloud at the right end of the tab bar (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
 
 ## Auth
 
@@ -74,6 +77,7 @@ Use Benevia Core's built-in login (access token + refresh token). This is NOT th
   - Core's login (`POST /api/auth/signin`, `POST /api/auth/refresh`) returns the refresh token in the JSON body and has no cookie option, so it is stored in IndexedDB, and the server sends a strict Content-Security-Policy with no third-party scripts. The app and API share one origin (the server serves the PWA).
   - Ask the server for a long refresh lifetime (about 90 days, extended on each use) so phones stay signed in.
 - **Sync flow:** before each push/pull, if there is no valid access token, refresh silently. If a request returns 401, refresh once and retry once.
+- **Never spend a refresh token without hearing back:** each refresh token works once, so a refresh the phone gives up on after the server answered signs the phone out. The server sleeps when idle (free App Service plan) and can take longer to wake than a phone waits, so each refresh first wakes it with `HEAD /api/$metadata`, which changes nothing; the refresh itself is never aborted by a sync. Only a 401 from the refresh means signing in again (first re-read the stored token, in case another copy of the app refreshed); anything else is retried like any sync error.
 - **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
 - **iPhone note:** a home-screen app has its own storage, separate from Safari. Users must sign in from inside the installed app.
 - **Sign out:** clear tokens only. Ask before also clearing local data.
@@ -120,7 +124,7 @@ Type: **Fraunces** (headings, big numbers, primary buttons), **Nunito Sans** (ev
 2. **Now (asleep)** — moss-deep background (near-black at night), running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep (editable while sleeping), "Adjust start time". A nap is plain stop/start: big **Woke up** ends it; a feed afterwards is its own event, and falling back asleep is another nap. A night has big **She's awake** (starts a NightWaking) and **Up for the day**. During a waking the same screen shows the awake-for timer, big **Feed** plus Solids / Note (the normal screens), then **Back asleep**: one button settling "by feeding" if she fed during the waking, otherwise Soothing / On her own. The Feed screen has **Asleep** during a waking, which saves the feed and closes the waking in one tap. No nap/night toggle here.
 3. **Woke-up sheet** — saved duration, editable start/end time buttons, wake mood chips, next sleep window callout, Done.
 4. **Night colors** — no separate night mode. From bedtime to morning, and while a night sleep runs, the whole app switches to near-black with dim warm text (the `night-theme` class on `<html>` remaps the color tokens).
-5. **Feed** — Nursing/Bottle toggle. Nursing: two big round Left/Right buttons; tap starts that side, tap again pauses, tap the other side switches; live per-side and total time; "last feed started on X · Nh ago"; −1/+1 min and start-time adjust; Done saves. Bottle: oz stepper.
+5. **Feed** — Nursing/Bottle toggle. Nursing: two big round Left/Right buttons; tap starts that side, tap again pauses, tap the other side switches; live per-side and total time; "last feed started on X · Nh ago"; −1/+1 min and start-time adjust; Done saves. While a side is running, the screen stays on (Screen Wake Lock, taken again when the app returns to the front). Bottle: oz stepper.
 6. **Solids** — search/add field (typing a new name offers "+ Add 'Mango'"), Recents chips, category tabs with preset chips (multi-select), optional amount (A taste / Some / All of it), Save with count.
 7. **Day** — date switcher, totals (sleep, naps, feeds), chronological list: sleep blocks (moss), awake gaps shown as wake windows (terracotta line + "Awake 2h 30m"), feed/solids rows with details. Anything logged during a sleep (night wakings, night feeds, solids, notes) is grouped inside that sleep's block as compact indented rows in time order, so a night reads as one block; it still counts in the totals. A night shows on the day it ends. Tap any row (or grouped row) to edit or delete.
 8. **Insights** — longest night stretch by month (from imported feed history + new sleep data), avg bedtime and spread (7 days), night wakings per night and how settled, the "best last wake window" pattern card (needs ~14 days of data; show "unlocks after…" until then). Link to **Growth**.
