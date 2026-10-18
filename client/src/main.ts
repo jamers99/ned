@@ -22,6 +22,8 @@ watchForProblems();
 startClock();
 listenForBack();
 
+// Ask the browser to keep the log and the sign-in even when the phone runs low on storage.
+void navigator.storage?.persist?.().catch(() => {});
 await loadUser();
 mount(App, { target: document.getElementById('app')! });
 

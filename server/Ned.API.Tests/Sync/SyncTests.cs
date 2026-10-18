@@ -8,7 +8,8 @@ namespace Ned.API.Tests.Sync;
 /// Exercises the API the way the phones' sync engine does: push upserts in a <c>$batch</c>
 /// (PATCH first, POST the ones that 404), then pull everything modified since a cursor.
 /// </summary>
-public class SyncTests(NedApiFactory api) : IClassFixture<NedApiFactory>
+[Collection(nameof(NedApiFactory))]
+public class SyncTests(NedApiFactory api)
 {
     const string EventFields = "Guid,Type,Start,End,IsNight,SleepLocation,ModifiedAt,Deleted,LoggedBy";
     readonly CancellationToken cancel = TestContext.Current.CancellationToken;

@@ -5,6 +5,7 @@
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
   import { sideSeconds } from '../lib/describe.ts';
   import { close } from '../lib/nav.svelte.ts';
+  import { keepScreenOn } from '../lib/screen.ts';
   import { latestRunning } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, stopwatch } from '../lib/time.ts';
@@ -13,9 +14,13 @@
 
   const now = $derived(clock.now);
   const feed = $derived(latestRunning(events, 'Feed'));
-  // During a night waking she often falls asleep at the breast: Asleep saves the feed and the waking at once.
-  const waking = $derived(latestRunning(events, 'NightWaking'));
   const lastNursing = $derived(events.filter(e => e.FeedKind === 'Nursing' && e.End != null && e.StartSide).at(-1));
+
+  // While a side is running the screen stays on, so the timer is there to glance at without a tap.
+  const nursing = $derived(feed?.ActiveSide != null);
+  $effect(() => {
+    if (nursing) return keepScreenOn();
+  });
 
   let kind = $state<FeedKind>('Nursing');
   let lastTapped = $state<Side | null>(null);
@@ -57,12 +62,6 @@
     else if (feed)
       void endFeed(feed);
     close();
-  }
-
-  /** She fell asleep feeding: saves the feed and closes the waking in one tap. */
-  function asleep() {
-    if (waking) void updateEvent(waking.Guid, { End: Date.now(), SettledBy: 'Feeding' });
-    save();
   }
 </script>
 
@@ -123,16 +122,9 @@
     </div>
   {/if}
 
-  {#if waking && (feed || kind === 'Bottle')}
-    <div class="finish">
-      <button class="primary-dark" onclick={asleep}>Asleep</button>
-      <button class="primary-light" onclick={save}>Save · still awake</button>
-    </div>
-  {:else}
-    <button class="primary-dark save" onclick={save}>
-      {kind === 'Bottle' ? 'Save bottle' : feed ? 'Done · save feed' : 'Close'}
-    </button>
-  {/if}
+  <button class="primary-dark save" onclick={save}>
+    {kind === 'Bottle' ? 'Save bottle' : feed ? 'Done · save feed' : 'Close'}
+  </button>
 </Overlay>
 
 <style>
@@ -277,29 +269,7 @@
     font-weight: 600;
   }
 
-  .save,
-  .finish {
+  .save {
     margin-top: auto;
-  }
-
-  .finish {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .finish .primary-dark {
-    height: 96px;
-    font-size: 26px;
-  }
-
-  .primary-light {
-    height: 56px;
-    border-radius: 22px;
-    border: 1px solid var(--line);
-    background: transparent;
-    color: var(--muted);
-    font-size: 16px;
-    font-weight: 800;
   }
 </style>

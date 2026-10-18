@@ -4,8 +4,8 @@
   import { close } from '../lib/nav.svelte.ts';
   import Icon from './Icon.svelte';
 
-  // A full-screen page over the tabs: a close button, a title, and anything small on the right.
-  let { title, aside, children }: { title: string; aside?: Snippet; children: Snippet } = $props();
+  // A full-screen page over the tabs: a close button and a centered title.
+  let { title, children }: { title: string; children: Snippet } = $props();
 </script>
 
 <div class="overlay" transition:rise>
@@ -13,7 +13,7 @@
     <header class="screen-header">
       <button class="round-button" aria-label="Close" onclick={close}><Icon name="close" size={18} width={2} /></button>
       <div class="screen-title">{title}</div>
-      <div class="aside">{@render aside?.()}</div>
+      <div class="spacer"></div>
     </header>
     {@render children()}
   </div>
@@ -28,8 +28,7 @@
     background: var(--ground);
   }
 
-  .aside {
+  .spacer {
     width: 44px;
-    text-align: right;
   }
 </style>

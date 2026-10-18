@@ -32,6 +32,13 @@ cd server && dotnet test Ned.slnx
 node --test tools/nara-import/nara.test.ts
 ```
 
+Screen tests click through the app in a phone-sized Chromium, on a fixed clock, with three days of seeded history and no server (`client/e2e/`). The first time, run `npx playwright install chromium` in `client/`.
+
+```bash
+cd client && npm run e2e           # flows: sleep, feeds, solids, notes, Day, Insights
+cd client && npm run e2e:screens   # a picture of every screen, day and night colors, in client/e2e/screens/
+```
+
 ## Deploy
 
 Every push to `main` that passes the tests deploys to Azure App Service through `./deploy.sh`. The database is on [Neon](https://neon.tech).
@@ -39,6 +46,19 @@ Every push to `main` that passes the tests deploys to Azure App Service through 
 To set it up the first time, sign in with `az login` and `gh auth login`, then run `./setup.sh`. It creates the Azure resources, asks for the Neon connection string and the parents' passwords, and lets GitHub Actions deploy. Leave the encryption key it generates alone: changing it signs everyone out.
 
 On each phone, open the site, choose **Add to Home Screen**, and sign in from the installed app. On iPhone, the installed app keeps its own storage, separate from Safari.
+
+## Connect Claude
+
+Claude can read Ned's data and log entries over MCP. In the Claude app, open **Settings → Connectors → Add custom connector** and enter `https://ned-baby.azurewebsites.net/mcp`. Claude opens a Ned page: sign in as one of the parents and choose **Allow**. Uncheck **Also let it log and edit entries** for read-only access.
+
+This needs two app settings, which `./setup.sh` creates. To add them to an app set up before Ned had MCP:
+
+```bash
+az webapp config appsettings set --resource-group rg-ned --name ned-baby --output none --settings \
+  "OAuth__Secret=$(openssl rand -hex 32)" OAuth__PublicOrigin=https://ned-baby.azurewebsites.net
+```
+
+Without `OAuth__Secret`, MCP is off and the rest of Ned works as before. Changing the secret disconnects Claude, which then asks to sign in again. Locally, OAuth only works over HTTPS, so try a connector through a tunnel (e.g. `ngrok http 5205`) with `OAuth__PublicOrigin` set to the tunnel's URL.
 
 ## Import from Nara
 

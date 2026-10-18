@@ -1,5 +1,5 @@
 import type { BabyEvent, Settings } from './db.ts';
-import { addDays, atMinuteOfDay, day, duration, hour, minute, minuteOfDay, startOfDay } from './time.ts';
+import { addDays, atMinuteOfDay, day, duration, endAfter, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
 export type SleepTargets = Pick<Settings, 'NapsPerDay' | 'NapWakeWindowMinutes' | 'BedtimeWakeWindowMinutes'
   | 'NightStartMinutes' | 'NightEndMinutes'>;
@@ -86,7 +86,7 @@ export interface NextSleep {
 }
 
 /** When the next sleep should start, from the wake-window target for this nap of the day. */
-export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep | null {
+export function nextSleep(events: BabyEvent[], targets: SleepTargets, now: number): NextSleep | null {
   const last = lastCompletedSleep(events);
   if (!last) return null;
 
@@ -95,8 +95,10 @@ export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep
   const napsToday = events.filter(e => isNap(e) && e.Start >= dayStart && e.Start < awakeSince).length;
   const napTarget = targets.NapWakeWindowMinutes;
   const bedtime = atMinuteOfDay(awakeSince, targets.NightStartMinutes);
-  // Another nap only fits if there's still room for its wake window and the one before bed.
-  const noRoomForNap = awakeSince + (napTarget + targets.BedtimeWakeWindowMinutes) * minute > bedtime;
+  // Another nap only fits if it can start in time to leave the wake window before bed. A nap she skips stops
+  // fitting once that time has passed.
+  const latestNap = bedtime - targets.BedtimeWakeWindowMinutes * minute;
+  const noRoomForNap = Math.max(awakeSince + napTarget * minute, now) > latestNap;
   const isBedtime = napsToday >= targets.NapsPerDay || noRoomForNap;
 
   if (!isBedtime) {
@@ -127,6 +129,32 @@ export function typicalNapRange(events: BabyEvent[], now: number): [number, numb
   return [round(quartile(0.25)), round(quartile(0.75))];
 }
 
+/** How long a nap runs before Ned asks if she's still asleep: well past her usual longest, or 3h with no history. */
+export function napOverdueAfter(events: BabyEvent[], now: number): number {
+  const typical = typicalNapRange(events, now);
+  return typical ? typical[1] + Math.max(30 * minute, typical[1] / 2) : 3 * hour;
+}
+
+/**
+ * Whether to ask if a running nap is still going, because someone may have forgotten Woke up.
+ * Saying she is still asleep (at `confirmedAt`) quiets the question for an hour.
+ */
+export function askStillAsleep(sleep: BabyEvent, events: BabyEvent[], now: number, confirmedAt = 0): boolean {
+  if (sleep.IsNight || sleep.End != null) return false;
+  return now - sleep.Start > napOverdueAfter(events, now) && now - confirmedAt > hour;
+}
+
+/**
+ * A waking logged after the fact, from the clock times on two time wheels: it starts at the first such time after
+ * the night began and ends at the first after that, no later than now. Null if it hasn't happened yet.
+ */
+export function pastWaking(sleep: BabyEvent, from: number, to: number, now: number): { Start: number; End: number } | null {
+  const start = endAfter(sleep.Start, from);
+  if (start >= now) return null;
+  const end = Math.min(now, endAfter(start, to));
+  return end > start ? { Start: start, End: end } : null;
+}
+
 /**
  * The local day an event shows under on the Day screen. A night, and the wakings in it, belong to the
  * morning it ends, so "Thursday" starts with Wednesday night's sleep.
@@ -137,7 +165,7 @@ export function dayOf(e: BabyEvent): number {
 }
 
 export type DayRow =
-  | { kind: 'sleep'; event: BabyEvent; label: string; asleep: number; wakings: BabyEvent[] }
+  | { kind: 'sleep'; event: BabyEvent; label: string; asleep: number; wakings: BabyEvent[]; during: BabyEvent[] }
   | { kind: 'window'; label: string }
   | { kind: 'event'; event: BabyEvent };
 
@@ -152,7 +180,8 @@ export interface DayTimeline {
 
 /**
  * Everything that belongs to one day, in order, with awake gaps between sleeps shown as wake windows.
- * Anything logged during a night (a waking, a night feed) belongs to that night's morning.
+ * Anything logged during a night (a waking, a night feed) belongs to that night's morning, and anything logged
+ * during a sleep is grouped in that sleep's row (`during`), so a night reads as one block.
  */
 export function dayTimeline(events: BabyEvent[], dayStart: number, now: number): DayTimeline {
   const nights = events.filter(e => isSleep(e) && e.IsNight);
@@ -162,6 +191,11 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
   };
   const own = events.filter(e => !e.Deleted && dayFor(e) === dayStart).sort(byStart);
   const timeline: DayTimeline = { rows: [], sleepTotal: 0, napCount: 0, napTotal: 0, feedCount: 0, nursingTotal: 0 };
+  const sleepRows: Extract<DayRow, { kind: 'sleep' }>[] = [];
+  // The sleep an event happened in. A night wins if a nap overlaps it.
+  const sleepRowAround = (e: BabyEvent) => sleepRows
+    .filter(r => e.Start >= r.event.Start && e.Start < (r.event.End ?? now))
+    .sort((a, b) => Number(b.event.IsNight) - Number(a.event.IsNight))[0];
   let previousSleepEnd: number | null = null;
   let windowSlot = 0;
 
@@ -182,7 +216,9 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       }
 
       const label = event.IsNight ? 'Night' : `Nap ${timeline.napCount}`;
-      timeline.rows.push({ kind: 'sleep', event, label, asleep, wakings });
+      const row = { kind: 'sleep' as const, event, label, asleep, wakings, during: [] as BabyEvent[] };
+      sleepRows.push(row);
+      timeline.rows.push(row);
       previousSleepEnd = event.End;
       windowSlot = timeline.rows.length;
       continue;
@@ -192,8 +228,12 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       timeline.feedCount++;
       timeline.nursingTotal += (event.LeftSeconds + event.RightSeconds) * 1000;
     }
+    const around = sleepRowAround(event);
+    if (around) {
+      around.during.push(event);
+      continue;
+    }
     timeline.rows.push({ kind: 'event', event });
-    if (previousSleepEnd != null && event.Start < previousSleepEnd) windowSlot = timeline.rows.length;
   }
 
   // Tonight's sleep belongs to tomorrow, but the wake window leading into it belongs to today.

@@ -35,8 +35,7 @@
   --on-moss-callout: #2F3828; /* text in a sleep callout */
   --moss-callout-note: #4E5B43;
   --moss-bar: #C3CBB3;        /* older bars in charts */
-  --moss-pale: #B9C3A8;       /* wake-window target on the bar; dim text when asleep */
-  --moss-mist: #D3DAC5;       /* secondary text when asleep */
+  --moss-pale: #B9C3A8;       /* wake-window target on the bar; the line under a sleep in the Day view */
   --button-shadow: 0 8px 22px rgba(62, 74, 53, 0.25);
 
   /* Terracotta: awake time and feeds */
@@ -44,15 +43,11 @@
   --terra-text: #93452B;      /* terracotta text on light */
   --terra-soft: #C98A6C;      /* wake-window line in the Day view */
   --feed-shadow: 0 10px 26px rgba(176, 88, 58, 0.35);
+  --feed-fill: var(--terra);  /* the big Feed buttons */
+  --on-feed-fill: var(--surface);
   --peach: #F6D9C3;           /* Woke up / She's awake button */
   --peach-text: #5A2E1C;
 
-  /* The asleep screen: light text on deep moss */
-  --sleep-bg: var(--moss-deep);
-  --on-sleep: #FCF9F3;
-  --sleep-tint: rgba(252, 249, 243, 0.08);
-  --sleep-line: rgba(252, 249, 243, 0.12);
-  --sleep-edge: rgba(252, 249, 243, 0.3);
   --scrim: rgba(58, 47, 37, 0.45);
 
   --serif: 'Fraunces', Georgia, serif;
@@ -86,21 +81,17 @@
   --moss-callout-note: #B9785F;
   --moss-bar: #3A2620;
   --moss-pale: #6E4A3A;
-  --moss-mist: #B9785F;
   --button-shadow: none;
 
   --terra: #B9785F;
   --terra-text: #E9A48C;
   --terra-soft: #7A4A38;
   --feed-shadow: none;
+  --feed-fill: #3B2219;       /* a big terracotta block would glow at night */
+  --on-feed-fill: #F0B39D;
   --peach: #241915;
   --peach-text: #F0B39D;
 
-  --sleep-bg: #0B0807;
-  --on-sleep: #E9A48C;
-  --sleep-tint: #140E0C;
-  --sleep-line: #3A2620;
-  --sleep-edge: #3A2620;
   --scrim: rgba(0, 0, 0, 0.6);
   color: var(--ink);
 }

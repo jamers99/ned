@@ -37,6 +37,9 @@ jobs:
       - name: Client tests
         working-directory: client
         run: npm ci && npm run check && npm test
+      - name: Screen tests
+        working-directory: client
+        run: npx playwright install --with-deps chromium && npm run e2e
       - name: Import tests
         run: node --test tools/nara-import/nara.test.ts
       - name: Server tests

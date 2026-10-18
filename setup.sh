@@ -21,6 +21,9 @@ settings=(
   "Tenants__Ned__ConnectionString=$database"
   "Tenants__Ned__EncryptionKey=$(openssl rand -hex 32)"
   "Tenants__Ned__AdminPassword=$(openssl rand -hex 16)Aa1!"
+  # Lets an AI app such as Claude connect over MCP. Changing the secret disconnects connected apps.
+  "OAuth__Secret=$(openssl rand -hex 32)"
+  "OAuth__PublicOrigin=https://$app.azurewebsites.net"
 )
 read -rp 'Parent names, separated by spaces: ' -a parents
 for parent in "${parents[@]}"; do

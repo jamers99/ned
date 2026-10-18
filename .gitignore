@@ -9,6 +9,10 @@ node_modules/
 dist/
 .vite/
 
+# Playwright results and screenshots
+client/e2e/results/
+client/e2e/screens/
+
 # Client build output copied into the server
 server/Ned.API/wwwroot/
 
