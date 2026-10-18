@@ -1,5 +1,5 @@
 import type { BabyEvent, Settings } from './db.ts';
-import { addDays, atMinuteOfDay, day, duration, hour, minute, minuteOfDay, startOfDay } from './time.ts';
+import { addDays, atMinuteOfDay, day, duration, endAfter, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
 export type SleepTargets = Pick<Settings, 'NapsPerDay' | 'NapWakeWindowMinutes' | 'BedtimeWakeWindowMinutes'
   | 'NightStartMinutes' | 'NightEndMinutes'>;
@@ -125,6 +125,32 @@ export function typicalNapRange(events: BabyEvent[], now: number): [number, numb
   const round = (ms: number) => Math.round(ms / (5 * minute)) * 5 * minute;
   const quartile = (q: number) => lengths[Math.round(q * (lengths.length - 1))];
   return [round(quartile(0.25)), round(quartile(0.75))];
+}
+
+/** How long a nap runs before Ned asks if she's still asleep: well past her usual longest, or 3h with no history. */
+export function napOverdueAfter(events: BabyEvent[], now: number): number {
+  const typical = typicalNapRange(events, now);
+  return typical ? typical[1] + Math.max(30 * minute, typical[1] / 2) : 3 * hour;
+}
+
+/**
+ * Whether to ask if a running nap is still going, because someone may have forgotten Woke up.
+ * Saying she is still asleep (at `confirmedAt`) quiets the question for an hour.
+ */
+export function askStillAsleep(sleep: BabyEvent, events: BabyEvent[], now: number, confirmedAt = 0): boolean {
+  if (sleep.IsNight || sleep.End != null) return false;
+  return now - sleep.Start > napOverdueAfter(events, now) && now - confirmedAt > hour;
+}
+
+/**
+ * A waking logged after the fact, from the clock times on two time wheels: it starts at the first such time after
+ * the night began and ends at the first after that, no later than now. Null if it hasn't happened yet.
+ */
+export function pastWaking(sleep: BabyEvent, from: number, to: number, now: number): { Start: number; End: number } | null {
+  const start = endAfter(sleep.Start, from);
+  if (start >= now) return null;
+  const end = Math.min(now, endAfter(start, to));
+  return end > start ? { Start: start, End: end } : null;
 }
 
 /**

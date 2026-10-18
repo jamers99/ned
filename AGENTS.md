@@ -106,11 +106,11 @@ Cottage feel: warm linen, sage for sleep, terracotta for awake time and feeds, s
 | ink | `#3A2F25` | text, primary dark button |
 | muted | `#6E6152` | secondary text |
 | moss | `#56654A` | sleep, primary action |
-| moss-deep | `#3E4A35` | asleep screen background |
+| moss-deep | `#3E4A35` | sleep text on light |
 | moss-soft | `#E4E7D7` | sleep callouts |
 | terra | `#B0583A` | awake, active feed side |
 | terra-text | `#93452B` | terracotta text on light |
-| peach | `#F6D9C3` | "Woke up" button on asleep screen |
+| peach | `#F6D9C3` | "Woke up" / "She's awake" buttons in the sleep drawer |
 | night-bg | `#0B0807` | night colors background |
 | night-text | `#E9A48C` / `#B9785F` | night colors text (dim, warm, no blue light) |
 
@@ -120,8 +120,8 @@ Type: **Fraunces** (headings, big numbers, primary buttons), **Nunito Sans** (ev
 
 ## Screens
 
-1. **Now (awake)** — awake-since + big duration, wake-window progress bar with the target nap/bedtime window, big **Start nap** button (says **Start night** when `IsNight` default is true), Feed / Solids / Note tiles, today strip (24h bar of sleeps and feeds). Tabs: Now, Day, Insights.
-2. **Now (asleep)** — moss-deep background (near-black at night), running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep (editable while sleeping), "Adjust start time". A nap is plain stop/start: big **Woke up** ends it; a feed afterwards is its own event, and falling back asleep is another nap. A night has big **She's awake** (starts a NightWaking) and **Up for the day**. During a waking the same screen shows the awake-for timer, big **Feed** plus Solids / Note (the normal screens), then **Back asleep**: one button settling "by feeding" if she fed during the waking, otherwise Soothing / On her own. The Feed screen has **Asleep** during a waking, which saves the feed and closes the waking in one tap. No nap/night toggle here.
+1. **Now** — sleep and feeds weigh the same; sleep is not a separate mode. A status card on top: while awake, awake-since + big duration and the wake-window progress bar with the target nap/bedtime window (tapping it opens a short plain explanation of the bar, the target zone and the times); while asleep, the running sleep (or the running night waking) with the typical-nap hint, and tapping it opens the sleep drawer. Below it, two equal big buttons, **Sleep** (moss) and **Feed** (terracotta), each opening its drawer; while one is running, its button shows a live dot and the timer (Sleep says **Start nap** / **Start night** from the `IsNight` default when idle). Smaller Solids / Note tiles, the last meal, today strip (24h bar of sleeps and feeds). Tabs: Now, Day, Insights.
+2. **Sleep drawer** — a full-height drawer like Feed. Before a sleep: the next nap/bedtime window, a **Fell asleep** time (Now, or picked on the wheel when the start was missed, up to a day back) and a big **Start nap** / **Start night** (`IsNight` from the start time; no nap/night toggle). While asleep: running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep, "Started …" to adjust the start. A nap is plain stop/start: big **Woke up** ends it; a feed afterwards is its own event, and falling back asleep is another nap. When a nap runs well past her usual longest (upper quartile + max(30 min, half of it); 3h before there's history), Now and the drawer gently ask **Still asleep?** — "Still asleep" quiets it for an hour, **Woke at…** ends the nap at a picked time and opens the Woke-up sheet. A night has big **She's awake** (starts a NightWaking), **Add a waking** (start/end times and how she settled, for one missed at the time) and **Up for the day**. During a waking the drawer shows the awake-for timer (its start adjustable), big **Feed** plus Solids / Note (the normal screens), then **Back asleep**: one button settling "by feeding" if she fed during the waking, otherwise Soothing / On her own. The Feed screen has **Asleep** during a waking, which saves the feed and closes the waking in one tap. Missed logging never reaches back more than a day.
 3. **Woke-up sheet** — saved duration, editable start/end time buttons, wake mood chips, next sleep window callout, Done.
 4. **Night colors** — no separate night mode. From bedtime to morning, and while a night sleep runs, the whole app switches to near-black with dim warm text (the `night-theme` class on `<html>` remaps the color tokens).
 5. **Feed** — Nursing/Bottle toggle. Nursing: two big round Left/Right buttons; tap starts that side, tap again pauses, tap the other side switches; live per-side and total time; "last feed started on X · Nh ago"; −1/+1 min and start-time adjust; Done saves. While a side is running, the screen stays on (Screen Wake Lock, taken again when the app returns to the front). Bottle: oz stepper.
@@ -153,7 +153,7 @@ Nara's columns carry a type prefix (`[Sleep] End Date/time (Epoch)`, `[Growth] W
 1. Server: entities, ModifiedAt stamping event, sync-safe query (bypass IsDeleted filter), two users + built-in login (access/refresh), serve the PWA from the same origin.
 2. Client shell: PWA manifest + precache, fonts, tokens, tab layout, Dexie schema.
 3. Sync engine (outbox, push, pull) with a tiny debug panel in settings.
-4. Sleep flow: Now (awake/asleep), Woke sheet, night colors.
+4. Sleep flow: Now, sleep drawer, Woke sheet, night colors.
 5. Feed timer, Solids, Notes.
 6. Day view with edit/delete.
 7. Nara import; verify counts.

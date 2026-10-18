@@ -44,6 +44,8 @@
   --terra-text: #93452B;      /* terracotta text on light */
   --terra-soft: #C98A6C;      /* wake-window line in the Day view */
   --feed-shadow: 0 10px 26px rgba(176, 88, 58, 0.35);
+  --feed-fill: var(--terra);  /* the big Feed buttons */
+  --on-feed-fill: var(--surface);
   --peach: #F6D9C3;           /* Woke up / She's awake button */
   --peach-text: #5A2E1C;
 
@@ -93,6 +95,8 @@
   --terra-text: #E9A48C;
   --terra-soft: #7A4A38;
   --feed-shadow: none;
+  --feed-fill: #3B2219;       /* a big terracotta block would glow at night */
+  --on-feed-fill: #F0B39D;
   --peach: #241915;
   --peach-text: #F0B39D;
 
