@@ -22,9 +22,9 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let failures = 0;
 
 /** Syncs soon. Every local write calls this, so a burst of taps becomes one push. */
-export function scheduleSync(delay = 1000) {
+export function scheduleSync() {
   clearTimeout(timer);
-  timer = setTimeout(syncNow, delay);
+  timer = setTimeout(syncNow, 1000);
 }
 
 export function syncNow(): Promise<void> {

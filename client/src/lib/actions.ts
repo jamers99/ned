@@ -90,10 +90,6 @@ export function switchSide(feed: BabyEvent, side: Side | null, at = Date.now(), 
 
 export const endFeed = (feed: BabyEvent, at = Date.now()) => switchSide(feed, null, at, { End: at });
 
-export function startSleep(now: number, isNight: boolean) {
-  return startRunning({ Type: 'Sleep', Start: now, IsNight: isNight });
-}
-
 /** Saves the chosen foods on a Solids event at `at` and bumps each food's recency, creating new foods. */
 export async function addSolids(foods: { name: string; category: FoodCategory }[], amount: BabyEvent['SolidAmount'],
   at = Date.now()) {

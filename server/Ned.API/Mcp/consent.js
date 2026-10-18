@@ -2,8 +2,9 @@
 // browser here with its own URL as returnUrl, and finishes the flow when the browser goes back to it.
 const returnUrl = new URLSearchParams(location.search).get('returnUrl') ?? '';
 const $ = id => document.getElementById(id);
+const authorize = authorizeUrl();
+const clientId = authorize?.searchParams.get('client_id') ?? '';
 let accessToken = '';
-let clientId = '';
 
 function authorizeUrl() {
   try {
@@ -51,7 +52,7 @@ async function signIn(event) {
   if (!response.ok) return showError((await messageFrom(response)) || 'Could not sign in.');
   accessToken = (await response.json()).accessToken;
 
-  const scope = authorizeUrl().searchParams.get('scope') ?? '';
+  const scope = authorize.searchParams.get('scope') ?? '';
   const info = await api(`/api/oauth/consent/info?clientId=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scope)}`);
   if (!info.ok) return showError(await messageFrom(info));
   $('client').textContent = (await info.json()).clientName;
@@ -68,9 +69,7 @@ async function allow() {
   finish('approve');
 }
 
-const url = authorizeUrl();
-clientId = url?.searchParams.get('client_id') ?? '';
-if (!url || !clientId) {
+if (!authorize || !clientId) {
   showError('This link did not come from Ned. Start connecting again from the app.');
 } else {
   $('sign-in').hidden = false;

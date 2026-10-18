@@ -4,17 +4,14 @@ const maxEntries = 40;
 
 export const diagnostics = $state({ log: restore() as { at: number; message: string }[] });
 
-export function note(message: string) {
+export function reportProblem(error: unknown) {
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   diagnostics.log = [{ at: Date.now(), message }, ...diagnostics.log].slice(0, maxEntries);
   try {
     sessionStorage.setItem(logKey, JSON.stringify(diagnostics.log));
   } catch {
     // Diagnostics are best-effort; private modes can refuse storage.
   }
-}
-
-export function reportProblem(error: unknown) {
-  note(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
 }
 
 export function watchForProblems() {

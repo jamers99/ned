@@ -45,15 +45,15 @@ function longestNightStretches(events: BabyEvent[]): Map<number, number> {
   return stretches;
 }
 
-/** The typical (median) longest night stretch per month, in hours, for the most recent months. */
-export function stretchByMonth(events: BabyEvent[], months = 8): { label: string; hours: number }[] {
+/** The typical (median) longest night stretch per month, in hours, for the last eight months. */
+export function stretchByMonth(events: BabyEvent[]): { label: string; hours: number }[] {
   const byMonth = new Map<string, number[]>();
   for (const [morning, stretch] of longestNightStretches(events)) {
     const d = new Date(morning);
     const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
     byMonth.set(key, [...(byMonth.get(key) ?? []), stretch]);
   }
-  return [...byMonth.keys()].sort().slice(-months).map(key => {
+  return [...byMonth.keys()].sort().slice(-8).map(key => {
     const [year, month] = key.split('-').map(Number);
     return {
       label: new Date(year, month, 1).toLocaleDateString([], { month: 'short' }),

@@ -30,6 +30,17 @@
   }
 </script>
 
+{#snippet eventRow(event: BabyEvent)}
+  {@const text = describe(event, now)}
+  <button class="event" onclick={() => open({ kind: 'edit', guid: event.Guid })}>
+    <span class="left">
+      <span class="event-label">{text.label}</span>
+      {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
+    </span>
+    <span class="event-time">{text.time}</span>
+  </button>
+{/snippet}
+
 <div class="screen" in:appear|global>
   <header class="screen-header">
     <button class="round-button" aria-label="Previous day" onclick={() => show(addDays(nav.day, -1))}>
@@ -63,12 +74,13 @@
       <div class="rows">
         {#each timeline.rows as row, i (row.kind === 'window' ? `window-${i}` : row.event.Guid)}
           {#if row.kind === 'sleep'}
+            {@const meta = sleepMeta(row.event, row.wakings)}
             <button class="sleep" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
               <span class="left">
                 <span class="serif sleep-label">{row.label}</span>
                 <span class="sleep-meta">
                   {row.event.End ? clockRange(row.event.Start, row.event.End) : `Since ${clockTime(row.event.Start)}`}
-                  {#if sleepMeta(row.event, row.wakings)} · {sleepMeta(row.event, row.wakings)}{/if}
+                  {#if meta} · {meta}{/if}
                 </span>
               </span>
               <span class="serif sleep-duration">{duration(row.asleep)}</span>
@@ -76,29 +88,13 @@
             <!-- What happened during a sleep (wakings, night feeds) hangs off it on a moss line, so a night reads as one. -->
             {#if row.during.length}
               <div class="during">
-                {#each row.during as event (event.Guid)}
-                  {@const text = describe(event, now)}
-                  <button class="event" onclick={() => open({ kind: 'edit', guid: event.Guid })}>
-                    <span class="left">
-                      <span class="event-label">{text.label}</span>
-                      {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
-                    </span>
-                    <span class="event-time">{text.time}</span>
-                  </button>
-                {/each}
+                {#each row.during as event (event.Guid)}{@render eventRow(event)}{/each}
               </div>
             {/if}
           {:else if row.kind === 'window'}
             <div class="window"><span class="line"></span>{row.label}</div>
           {:else}
-            {@const text = describe(row.event, now)}
-            <button class="event" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
-              <span class="left">
-                <span class="event-label">{text.label}</span>
-                {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
-              </span>
-              <span class="event-time">{text.time}</span>
-            </button>
+            {@render eventRow(row.event)}
           {/if}
         {:else}
           <p class="empty">Nothing logged {isToday ? 'yet today' : 'this day'}.</p>

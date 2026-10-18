@@ -3,7 +3,7 @@
   import Icon from '../components/Icon.svelte';
   import TodayStrip from '../components/TodayStrip.svelte';
   import type { BabyEvent } from '../lib/db.ts';
-  import { startSleep } from '../lib/actions.ts';
+  import { startRunning } from '../lib/actions.ts';
   import { nursedSeconds } from '../lib/describe.ts';
   import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
@@ -40,7 +40,7 @@
 
   // One tap starts the sleep at now; the drawer that opens can move its start earlier, like Feed's.
   async function sleepTapped() {
-    if (!sleeping) await startSleep(Date.now(), isNightTime(Date.now(), targets));
+    if (!sleeping) await startRunning({ Type: 'Sleep', Start: Date.now(), IsNight: isNightTime(Date.now(), targets) });
     open({ kind: 'sleep' });
   }
 </script>

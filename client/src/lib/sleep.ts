@@ -232,7 +232,6 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       continue;
     }
     timeline.rows.push({ kind: 'event', event });
-    if (previousSleepEnd != null && event.Start < previousSleepEnd) windowSlot = timeline.rows.length;
   }
 
   // Tonight's sleep belongs to tomorrow, but the wake window leading into it belongs to today.
