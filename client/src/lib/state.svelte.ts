@@ -16,6 +16,9 @@ export const status = $state({
   error: ''
 });
 
+/** The last time someone said a long nap is still going, so Now and the sleep drawer stop asking for a while. */
+export const stillAsleep = $state({ guid: '', at: 0 });
+
 // Live queries only run while this copy of the app is on screen; coming back to the front starts them over.
 let onScreen = $state(true);
 

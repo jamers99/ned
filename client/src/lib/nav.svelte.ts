@@ -3,6 +3,8 @@ import { startOfDay } from './time.ts';
 export type Tab = 'now' | 'day' | 'insights';
 
 export type Overlay =
+  | { kind: 'sleep' }
+  | { kind: 'wakeWindow' }
   | { kind: 'feed' }
   | { kind: 'solids' }
   | { kind: 'note' }

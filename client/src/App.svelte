@@ -15,7 +15,9 @@
   import Now from './screens/Now.svelte';
   import Settings from './screens/Settings.svelte';
   import SignIn from './screens/SignIn.svelte';
+  import Sleep from './screens/Sleep.svelte';
   import Solids from './screens/Solids.svelte';
+  import WakeWindowSheet from './screens/WakeWindowSheet.svelte';
   import WokeSheet from './screens/WokeSheet.svelte';
 
   // The last two weeks drive Now, the wake-window math and typical nap lengths.
@@ -26,7 +28,6 @@
   const events = $derived((recent.value ?? []).filter(e => !e.Deleted));
   const targets = $derived(targetsFrom(settingsRow.value));
   const sleeping = $derived(latestRunning(events, 'Sleep'));
-  const dark = $derived(nav.tab === 'now' && sleeping != null);
   const overlay = $derived(nav.overlay);
   // From bedtime to morning, and through any night sleep, the whole app goes near-black and dim.
   const night = $derived(isNightTime(clock.now, targets) || sleeping?.IsNight === true);
@@ -34,7 +35,7 @@
   $effect(() => {
     const root = document.documentElement;
     root.classList.toggle('night-theme', night);
-    const color = getComputedStyle(root).getPropertyValue(dark && !overlay ? '--sleep-bg' : '--ground').trim();
+    const color = getComputedStyle(root).getPropertyValue('--ground').trim();
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
     document.body.style.background = color;
   });
@@ -43,7 +44,7 @@
 {#if !status.user && !status.guest}
   <SignIn />
 {:else if recent.value}
-  <main class:dark>
+  <main>
     {#if status.needsSignIn}
       <button class="banner" onclick={() => open({ kind: 'signin' })}>Sign in to sync</button>
     {/if}
@@ -54,10 +55,14 @@
     {:else}
       <Insights />
     {/if}
-    <TabBar {dark} />
+    <TabBar />
   </main>
 
-  {#if overlay?.kind === 'feed'}
+  {#if overlay?.kind === 'sleep'}
+    <Sleep {events} {targets} />
+  {:else if overlay?.kind === 'wakeWindow'}
+    <WakeWindowSheet {events} {targets} />
+  {:else if overlay?.kind === 'feed'}
     <Feed {events} />
   {:else if overlay?.kind === 'solids'}
     <Solids />
@@ -81,10 +86,6 @@
     min-height: 100%;
     padding-bottom: calc(var(--safe-bottom) + 72px);
     transition: background-color var(--quick);
-  }
-
-  main.dark {
-    background: var(--sleep-bg);
   }
 
   .banner {
