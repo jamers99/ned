@@ -63,12 +63,12 @@
   }
 
   /**
-   * A sleep started by mistake: deleted, with any wakings logged in it. Feeds stay; they happened.
+   * For a sleep started by mistake: deletes it with any wakings logged in it. Feeds stay; they happened.
    * Asks first unless it was only just started.
    */
-  function cancelSleep() {
+  function deleteSleep() {
     if (!sleep) return;
-    if (Date.now() - sleep.Start > 5 * minute && !confirm(`Cancel this ${sleep.IsNight ? 'night' : 'nap'}? It won't be saved.`))
+    if (Date.now() - sleep.Start > 5 * minute && !confirm(`Delete this ${sleep.IsNight ? 'night' : 'nap'}?`))
       return;
     for (const w of wakings) void deleteEvent(w.Guid);
     void deleteEvent(sleep.Guid);
@@ -197,6 +197,7 @@
       {#if sleep.IsNight && !adding}
         <button class="pill" onclick={beginAdding}>Add a waking</button>
       {/if}
+      <button class="pill delete" onclick={deleteSleep}>Delete</button>
     </div>
 
     {#if adding}
@@ -231,10 +232,6 @@
       <Icon name="sun" size={20} stroke="currentColor" width={1.8} />
       Up for the day
     </button>
-  {/if}
-
-  {#if sleep && !waking}
-    <button class="cancel" onclick={cancelSleep}>Started by mistake? Cancel {sleep.IsNight ? 'night' : 'nap'}</button>
   {/if}
 </Overlay>
 
@@ -409,12 +406,7 @@
     color: var(--muted);
   }
 
-  .cancel {
-    min-height: 44px;
-    border: 0;
-    background: none;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--muted);
+  .delete {
+    color: var(--terra-text);
   }
 </style>
