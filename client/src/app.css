@@ -35,8 +35,7 @@
   --on-moss-callout: #2F3828; /* text in a sleep callout */
   --moss-callout-note: #4E5B43;
   --moss-bar: #C3CBB3;        /* older bars in charts */
-  --moss-pale: #B9C3A8;       /* wake-window target on the bar; dim text when asleep */
-  --moss-mist: #D3DAC5;       /* secondary text when asleep */
+  --moss-pale: #B9C3A8;       /* wake-window target on the bar; the line under a sleep in the Day view */
   --button-shadow: 0 8px 22px rgba(62, 74, 53, 0.25);
 
   /* Terracotta: awake time and feeds */
@@ -82,7 +81,6 @@
   --moss-callout-note: #B9785F;
   --moss-bar: #3A2620;
   --moss-pale: #6E4A3A;
-  --moss-mist: #B9785F;
   --button-shadow: none;
 
   --terra: #B9785F;

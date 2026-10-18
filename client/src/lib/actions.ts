@@ -139,7 +139,7 @@ export async function deleteGrowth(guid: string) {
   scheduleSync();
 }
 
-export async function loadSettings(): Promise<Settings> {
+async function loadSettings(): Promise<Settings> {
   const row = await db.settings.get(settingsGuid);
   return {
     Guid: settingsGuid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0, ...row, ...targetsFrom(row)

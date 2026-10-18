@@ -15,7 +15,7 @@ function median(values: number[]): number {
  * Her longest stretch each night, keyed by the morning it ended. Logged nights use the time between wakings;
  * older nights (like the Nara history) fall back to the longest gap between feeds from 6 PM to 9 AM.
  */
-export function longestNightStretches(events: BabyEvent[]): Map<number, number> {
+function longestNightStretches(events: BabyEvent[]): Map<number, number> {
   const live = events.filter(e => !e.Deleted);
   const stretches = new Map<number, number>();
 

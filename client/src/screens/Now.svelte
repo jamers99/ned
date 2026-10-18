@@ -6,7 +6,7 @@
   import { startSleep } from '../lib/actions.ts';
   import { nursedSeconds } from '../lib/describe.ts';
   import { appear } from '../lib/motion.ts';
-  import { open, showTab } from '../lib/nav.svelte.ts';
+  import { open } from '../lib/nav.svelte.ts';
   import {
     askStillAsleep, isNightTime, latestRunning, napNumber, nextSleep, timeAsleep, typicalNapRange, wakingsDuring,
     type SleepTargets
@@ -33,21 +33,15 @@
   const awakeFor = $derived(next ? now - next.awakeSince : 0);
   const barSpan = $derived(next ? next.to - next.awakeSince + 20 * minute : 1);
 
-  // The last finished feed or solids, timed from when it started, like the gap between feeds is usually counted.
-  const lastMeal = $derived(events.filter(e => (e.Type === 'Feed' || e.Type === 'Solids') && e.End != null).at(-1));
-  const lastMealAgo = $derived(lastMeal ? now - lastMeal.Start : 0);
+  // The last feed and the last solids, timed from when they started, like the gap between feeds is usually counted.
+  const lastFeed = $derived(events.filter(e => e.Type === 'Feed' && e.End != null).at(-1));
+  const lastSolids = $derived(events.filter(e => e.Type === 'Solids').at(-1));
+  const ago = (at: number) => (now - at < minute ? 'just now' : `${duration(now - at)} ago`);
 
   // One tap starts the sleep at now; the drawer that opens can move its start earlier, like Feed's.
   async function sleepTapped() {
     if (!sleeping) await startSleep(Date.now(), isNightTime(Date.now(), targets));
     open({ kind: 'sleep' });
-  }
-
-  function mealDetail(meal: BabyEvent): string {
-    if (meal.Type === 'Solids') return meal.Foods.join(', ') || 'solids';
-    if (meal.FeedKind === 'Bottle') return `${meal.BottleOz ?? 0} oz bottle`;
-    const seconds = meal.LeftSeconds + meal.RightSeconds;
-    return seconds ? `nursed ${duration(seconds * 1000)}` : 'nursed';
   }
 </script>
 
@@ -60,9 +54,15 @@
         <Icon name="sprig" size={24} stroke="var(--moss)" width={1.5} />
       </div>
     </div>
-    <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
-      <Icon name="sliders" size={20} />
-    </button>
+    <!-- A note is rare, so it waits up here rather than taking a tile. -->
+    <div class="header-buttons">
+      <button class="round-button" aria-label="Note" onclick={() => open({ kind: 'note' })}>
+        <Icon name="pencil" size={20} />
+      </button>
+      <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
+        <Icon name="sliders" size={20} />
+      </button>
+    </div>
   </header>
 
   {#if sleeping}
@@ -119,10 +119,10 @@
     <button class="action sleep" onclick={sleepTapped}>
       <Icon name={waking ? 'sun' : 'moonStar'} size={28} stroke="var(--on-moss)" width={1.8} />
       <span class="action-label serif">{sleepTitle}</span>
+      <!-- The status card above has the timer; here a dot says it's running. -->
       <span class="action-state">
-        {#if askAwake}Still asleep?
-        {:else if waking}<span class="live"></span>Awake {duration(now - waking.Start)}
-        {:else if sleeping}<span class="live"></span>Asleep {duration(asleepFor)}
+        {#if waking}<span class="live"></span>Awake
+        {:else if sleeping}<span class="live"></span>Asleep
         {:else}{isNightTime(now, targets) ? 'Start night' : 'Start nap'}{/if}
       </span>
     </button>
@@ -132,34 +132,22 @@
       <span class="action-state">
         {#if feeding}
           <span class="live"></span>{stopwatch(nursedSeconds(feeding, now) * 1000)} · {feeding.ActiveSide ?? 'paused'}
+        {:else if lastFeed}Fed {ago(lastFeed.Start)}
         {:else}Nursing or bottle{/if}
       </span>
     </button>
   </div>
 
-  <div class="tiles">
-    <button class="tile" onclick={() => open({ kind: 'solids' })}>
-      <Icon name="bowl" stroke="var(--terra-text)" />
-      Solids
-    </button>
-    <button class="tile" onclick={() => open({ kind: 'note' })}>
-      <Icon name="pencil" stroke="var(--terra-text)" />
-      Note
-    </button>
-  </div>
-
-  {#if lastMeal}
-    <button class="card last-meal" onclick={() => showTab('day')}>
-      <Icon name={lastMeal.Type === 'Solids' ? 'bowl' : 'drop'} stroke="var(--terra-text)" />
-      <span class="last-meal-text">
-        <span class="last-meal-ago serif">
-          {lastMeal.Type === 'Solids' ? 'Ate' : 'Fed'} {lastMealAgo < minute ? 'just now' : `${duration(lastMealAgo)} ago`}
-        </span>
-        <span class="last-meal-meta">{clockTime(lastMeal.Start)} · {mealDetail(lastMeal)}</span>
-      </span>
-      <Icon name="right" size={18} stroke="var(--muted)" />
-    </button>
-  {/if}
+  <button class="card solids" onclick={() => open({ kind: 'solids' })}>
+    <Icon name="bowl" stroke="var(--terra-text)" />
+    <span class="solids-text">
+      <span class="solids-label">Solids</span>
+      {#if lastSolids}
+        <span class="solids-meta">Ate {ago(lastSolids.Start)}{lastSolids.Foods.length ? ` · ${lastSolids.Foods.join(', ')}` : ''}</span>
+      {/if}
+    </span>
+    <Icon name="plus" size={20} stroke="var(--muted)" />
+  </button>
 
   <TodayStrip {events} {now} />
 </div>
@@ -345,28 +333,14 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 35%, transparent);
   }
 
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .tile {
-    height: 60px;
-    border-radius: 22px;
-    border: 1px solid var(--line);
-    background: var(--surface);
+  .header-buttons {
     display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 8px;
-    font-size: 15px;
-    font-weight: 800;
   }
 
-  .last-meal {
-    min-height: 60px;
-    padding: 10px 16px;
+  .solids {
+    min-height: 64px;
+    padding: 10px 18px;
     border-radius: 22px;
     display: flex;
     align-items: center;
@@ -374,7 +348,11 @@
     text-align: left;
   }
 
-  .last-meal-text {
+  .solids:active {
+    transform: scale(0.99);
+  }
+
+  .solids-text {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -382,12 +360,12 @@
     gap: 1px;
   }
 
-  .last-meal-ago {
-    font-size: 18px;
-    font-weight: 600;
+  .solids-label {
+    font-size: 15px;
+    font-weight: 800;
   }
 
-  .last-meal-meta {
+  .solids-meta {
     font-size: 13px;
     font-weight: 700;
     color: var(--muted);
