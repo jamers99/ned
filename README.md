@@ -32,6 +32,13 @@ cd server && dotnet test Ned.slnx
 node --test tools/nara-import/nara.test.ts
 ```
 
+Screen tests click through the app in a phone-sized Chromium, on a fixed clock, with three days of seeded history and no server (`client/e2e/`). The first time, run `npx playwright install chromium` in `client/`.
+
+```bash
+cd client && npm run e2e           # flows: sleep, feeds, solids, notes, Day, Insights
+cd client && npm run e2e:screens   # a picture of every screen, day and night colors, in client/e2e/screens/
+```
+
 ## Deploy
 
 Every push to `main` that passes the tests deploys to Azure App Service through `./deploy.sh`. The database is on [Neon](https://neon.tech).

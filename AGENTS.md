@@ -91,6 +91,12 @@ An AI app such as Claude connects to `https://<host>/mcp` as a custom connector,
 - **Keep the phone's logic on the phone.** The UI stays offline-first; the server only fills in what an app can't: `LoggedBy` defaults to the signed-in parent when empty (also for rows logged before signing in), and a Solids event logged by a connected app counts its foods in Food (same UUIDv5 as the phones). Phones count their own foods, so the server leaves their solids alone.
 - **Agent instructions:** `NedMcp.AppInstructions`, appended to Core's rules. Clients cut the whole block at 2,048 bytes, so keep it under ~800 bytes; derived rules an agent must follow (IsNight from the night range, soft deletes) go there.
 
+## Tests
+
+- `client/src/**/*.test.ts` (Vitest): the logic in `lib/` — sleep math, sync, auth, export.
+- `client/e2e/` (Playwright, `npm run e2e`, runs in CI): flows through the real screens in a phone-sized Chromium. `fixtures.ts` starts every test at Sunday Oct 18 2026, 1 PM (America/Chicago) on Playwright's fake clock, with three days of history written into IndexedDB as a guest, so nothing needs a server. `app.wait(minutes)` moves the clock on. When a screen changes on purpose, change its flow; when a bug is fixed, add one.
+- `npm run e2e:screens` saves every screen in day and night colors to `client/e2e/screens/` (not committed). Look them over after a UI change; they aren't compared pixel by pixel.
+
 ## Performance rules (client)
 
 - Precache the entire app shell, fonts, and icons. Launch must not touch the network.

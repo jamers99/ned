@@ -1,0 +1,54 @@
+import { expect, test } from './fixtures.ts';
+
+test('nursing switches sides and saves', async ({ app, page }) => {
+  await app.feedButton.click();
+  await page.getByRole('button', { name: /^Left/ }).click();
+  await app.wait(5);
+  await page.getByRole('button', { name: /^Right/ }).click();
+  await app.wait(3);
+  await page.getByRole('button', { name: /^Right/ }).click();
+  await expect(page.locator('.total .big')).toHaveText(/^8:0\d$/);
+
+  await app.button('Close').click();
+  await expect(app.feedButton).toContainText(/8:0\d · paused/);
+  await app.feedButton.click();
+  await app.button('Done · save feed').click();
+  await expect(app.feedButton).toContainText('Fed 8m ago');
+
+  await app.button('Day').click();
+  await expect(page.getByText('Nursed · 8m')).toBeVisible();
+  await expect(page.getByText('L 5m · R 3m')).toBeVisible();
+});
+
+test('a bottle starts from the last amount', async ({ app, page }) => {
+  await app.feedButton.click();
+  await page.getByRole('tab', { name: 'Bottle' }).click();
+  await expect(page.getByText('4 oz')).toBeVisible();
+  await app.button('More').click();
+  await app.button('More').click();
+  await app.button('Save bottle').click();
+
+  await app.button('Day').click();
+  await expect(page.getByText('Bottle · 5 oz')).toBeVisible();
+});
+
+test('solids adds a new food and it shows on Now and in Recent', async ({ app, page }) => {
+  await page.locator('button.solids').click();
+  await page.getByLabel('Find or add a food').fill('Kiwi');
+  await app.button('Add “Kiwi”').click();
+  await app.button('A taste').click();
+  await app.button('Save · 1 food').click();
+  await expect(page.locator('button.solids')).toContainText('Ate just now · Kiwi');
+
+  await page.locator('button.solids').click();
+  await expect(page.locator('.group', { hasText: 'Recent' })).toContainText('Kiwi');
+});
+
+test('a note is saved from the square beside Solids', async ({ app, page }) => {
+  await app.button('Note').click();
+  await page.getByRole('textbox', { name: 'Note' }).fill('First tooth!');
+  await app.button('Save note').click();
+
+  await app.button('Day').click();
+  await expect(page.getByText('First tooth!')).toBeVisible();
+});

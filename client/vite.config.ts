@@ -42,6 +42,8 @@ export default defineConfig({
     proxy: { '/api': 'http://localhost:5205' }
   },
   test: {
-    environment: 'node'
+    environment: 'node',
+    // e2e/ is Playwright's
+    include: ['src/**/*.test.ts']
   }
 });
