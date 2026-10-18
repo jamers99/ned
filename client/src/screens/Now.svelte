@@ -20,7 +20,7 @@
   const now = $derived(clock.now);
   const sleeping = $derived(latestRunning(events, 'Sleep'));
   const feeding = $derived(latestRunning(events, 'Feed'));
-  const next = $derived(nextSleep(events, targets));
+  const next = $derived(nextSleep(events, targets, now));
 
   const wakings = $derived(sleeping ? wakingsDuring(sleeping, events) : []);
   const waking = $derived(wakings.find(w => w.End == null));

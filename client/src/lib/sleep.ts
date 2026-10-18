@@ -86,7 +86,7 @@ export interface NextSleep {
 }
 
 /** When the next sleep should start, from the wake-window target for this nap of the day. */
-export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep | null {
+export function nextSleep(events: BabyEvent[], targets: SleepTargets, now: number): NextSleep | null {
   const last = lastCompletedSleep(events);
   if (!last) return null;
 
@@ -95,8 +95,10 @@ export function nextSleep(events: BabyEvent[], targets: SleepTargets): NextSleep
   const napsToday = events.filter(e => isNap(e) && e.Start >= dayStart && e.Start < awakeSince).length;
   const napTarget = targets.NapWakeWindowMinutes;
   const bedtime = atMinuteOfDay(awakeSince, targets.NightStartMinutes);
-  // Another nap only fits if there's still room for its wake window and the one before bed.
-  const noRoomForNap = awakeSince + (napTarget + targets.BedtimeWakeWindowMinutes) * minute > bedtime;
+  // Another nap only fits if it can start in time to leave the wake window before bed. A nap she skips stops
+  // fitting once that time has passed.
+  const latestNap = bedtime - targets.BedtimeWakeWindowMinutes * minute;
+  const noRoomForNap = Math.max(awakeSince + napTarget * minute, now) > latestNap;
   const isBedtime = napsToday >= targets.NapsPerDay || noRoomForNap;
 
   if (!isBedtime) {

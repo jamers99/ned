@@ -145,7 +145,7 @@ Type: **Fraunces** (headings, big numbers, primary buttons), **Nunito Sans** (ev
 8. **Insights** — longest night stretch by month (from imported feed history + new sleep data), avg bedtime and spread (7 days), night wakings per night and how settled, the "best last wake window" pattern card (needs ~14 days of data; show "unlocks after…" until then). Link to **Growth**.
 9. **Growth** — weight, length, head charts over time (optional WHO girls percentile bands), list of measurements, "Add measurement".
 
-Wake-window logic: awake time = now − end of the last sleep. Target comes from Settings (before a nap, or before bed once the day's naps are done or no nap fits before the latest bedtime); show a nap's window as target ± 10 min; bedtime is the bedtime setting. Keep it all client-side.
+Wake-window logic: awake time = now − end of the last sleep. Target comes from Settings (before a nap, or before bed once the day's naps are done or another nap can no longer start in time to leave the before-bed wake window, including a nap she skipped); show a nap's window as target ± 10 min; bedtime is the bedtime setting. Keep it all client-side.
 
 ## Nara import (`/tools/nara-import`)
 

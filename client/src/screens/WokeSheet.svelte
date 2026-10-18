@@ -6,12 +6,13 @@
   import type { BabyEvent, WakeMood } from '../lib/db.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { napNumber, nextSleep, timeAsleep, wakingsDuring, type SleepTargets } from '../lib/sleep.ts';
+  import { clock } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, endAfter, minute } from '../lib/time.ts';
 
   let { guid, events, targets }: { guid: string; events: BabyEvent[]; targets: SleepTargets } = $props();
 
   const sleep = $derived(events.find(e => e.Guid === guid));
-  const next = $derived(nextSleep(events, targets));
+  const next = $derived(nextSleep(events, targets, clock.now));
   const moods: WakeMood[] = ['Happy', 'Fussy', 'Crying'];
 
   function setStart(start: number) {

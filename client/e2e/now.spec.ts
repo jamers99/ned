@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures.ts';
+import { at, expect, test } from './fixtures.ts';
 
 test('Now shows the wake window, the last feed and the last solids', async ({ app, page }) => {
   await expect(page.getByText('since 10:35 AM')).toBeVisible();
@@ -15,6 +15,14 @@ test('tapping the wake window explains it', async ({ app, page }) => {
   await expect(page.getByText('The shaded zone')).toBeVisible();
   await app.button('Got it').click();
   await expect(page.getByText('The wake window')).toBeHidden();
+});
+
+test.describe('late afternoon without nap 2', () => {
+  test.use({ startAt: at(18, '17:00') });
+
+  test('aims for bedtime instead of the missed nap', async ({ page }) => {
+    await expect(page.locator('.status')).toContainText('Bedtime 8:00 PM');
+  });
 });
 
 test.describe('fresh install', () => {

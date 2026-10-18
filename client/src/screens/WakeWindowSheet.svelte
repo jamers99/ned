@@ -4,12 +4,13 @@
   import { close, open } from '../lib/nav.svelte.ts';
   import { nextSleep, type SleepTargets } from '../lib/sleep.ts';
   import type { BabyEvent } from '../lib/db.ts';
+  import { clock } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, duration, minute } from '../lib/time.ts';
 
   // What the bar on Now means, in plain words, with today's numbers in it.
   let { events, targets }: { events: BabyEvent[]; targets: SleepTargets } = $props();
 
-  const next = $derived(nextSleep(events, targets));
+  const next = $derived(nextSleep(events, targets, clock.now));
 </script>
 
 <Sheet>

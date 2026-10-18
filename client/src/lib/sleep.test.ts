@@ -44,23 +44,29 @@ describe('night default', () => {
 
 describe('next sleep window', () => {
   it('follows the nap target through the day, then aims for the bedtime setting', () => {
-    const afterNight = nextSleep([night], defaultTargets)!;
+    const afterNight = nextSleep([night], defaultTargets, at(8, '07:00'))!;
     expect(afterNight).toMatchObject({ kind: 'nap', napNumber: 1, targetMinutes: 150 });
     expect([clockTime(afterNight.from), clockTime(afterNight.to)]).toEqual([clockTime(at(8, '09:00')), clockTime(at(8, '09:20'))]);
 
-    const afterNap1 = nextSleep([night, nap1], defaultTargets)!;
+    const afterNap1 = nextSleep([night, nap1], defaultTargets, at(8, '11:00'))!;
     expect(afterNap1).toMatchObject({ kind: 'nap', napNumber: 2, targetMinutes: 150 });
     expect(afterNap1.from).toBe(at(8, '12:40'));
 
     // After the day's two naps it's bedtime: 8 PM, which leaves a 6h 25m wake window after a nap ending at 1:35 PM.
-    const afterNap2 = nextSleep([night, nap1, nap2], defaultTargets)!;
+    const afterNap2 = nextSleep([night, nap1, nap2], defaultTargets, at(8, '14:00'))!;
     expect(afterNap2).toMatchObject({ kind: 'bedtime', targetMinutes: 6 * 60 + 25 });
     expect([afterNap2.from, afterNap2.to]).toEqual([at(8, '20:00'), at(8, '20:00')]);
   });
 
   it('switches to bedtime when another nap would run into the evening', () => {
     const lateNap = event({ Type: 'Sleep', Start: at(8, '15:00'), End: at(8, '16:30') });
-    expect(nextSleep([night, lateNap], defaultTargets)?.kind).toBe('bedtime');
+    expect(nextSleep([night, lateNap], defaultTargets, at(8, '17:00'))?.kind).toBe('bedtime');
+  });
+
+  it('switches to bedtime once a skipped nap no longer leaves room before bed', () => {
+    // A nap has to start by 4:30 PM to leave the 3h 30m before an 8 PM bedtime.
+    expect(nextSleep([night, nap1], defaultTargets, at(8, '16:30'))?.kind).toBe('nap');
+    expect(nextSleep([night, nap1], defaultTargets, at(8, '16:31'))).toMatchObject({ kind: 'bedtime', from: at(8, '20:00') });
   });
 });
 

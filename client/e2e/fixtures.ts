@@ -133,7 +133,8 @@ type Options = {
 export const test = base.extend<Options & { app: App }>({
   startAt: [now, { option: true }],
   seeded: [true, { option: true }],
-  app: async ({ page, startAt, seeded }, use) => {
+  // Automatic, so a test that only asks for `page` still gets the app opened and seeded.
+  app: [async ({ page, startAt, seeded }, use) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.install({ time: startAt });
@@ -144,7 +145,7 @@ export const test = base.extend<Options & { app: App }>({
 
     await use(new App(page));
     expect(errors, 'errors on the page').toEqual([]);
-  }
+  }, { auto: true }]
 });
 
 export { expect };
