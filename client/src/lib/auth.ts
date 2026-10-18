@@ -4,6 +4,11 @@ import { status } from './state.svelte.ts';
 const tenantId = 'Ned';
 // Android can leave a request hanging while the app is in the background; give up rather than wait.
 const authTimeout = 15_000;
+// The server sleeps when nobody has used it for a while, and waking it can take longer than authTimeout.
+// A refresh token works only once, so giving up on a refresh the server did answer leaves the phone holding
+// a spent token: it is signed out. So each refresh first wakes the server with a request that changes nothing.
+const wakeTimeout = 60_000;
+const refreshTimeout = 30_000;
 
 // The access token lives in memory only. The refresh token is in IndexedDB so phones stay signed in.
 let accessToken = '';
@@ -65,46 +70,62 @@ export async function signOut(clearData: boolean) {
 
 /** Fetches from the API, refreshing the access token first if needed and once more after a 401. */
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  if (Date.now() > accessExpiresAt - 60_000 && !(await refresh()))
+  if (Date.now() > accessExpiresAt - 60_000 && !(await refresh(init.signal)))
     throw new SignInRequired();
 
   const response = await fetch(path, withToken(init));
   if (response.status !== 401) return response;
 
-  if (!(await refresh())) throw new SignInRequired();
+  if (!(await refresh(init.signal))) throw new SignInRequired();
   return fetch(path, withToken(init));
 }
 
-/** Each refresh token works once, so concurrent callers share one refresh. */
-function refresh(): Promise<boolean> {
-  refreshing ??= refreshOnce().finally(() => (refreshing = null));
+/**
+ * Each refresh token works once, so concurrent callers share one refresh. The caller's signal can abandon
+ * waking the server, which is harmless, but never the refresh itself.
+ */
+function refresh(signal?: AbortSignal | null): Promise<boolean> {
+  refreshing ??= refreshOnce(signal).finally(() => (refreshing = null));
   return refreshing;
 }
 
-async function refreshOnce(): Promise<boolean> {
-  const oldRefreshToken = await getMeta<string>('refreshToken');
-  if (!oldRefreshToken) {
+async function refreshOnce(signal?: AbortSignal | null): Promise<boolean> {
+  const sent = await getMeta<string>('refreshToken');
+  if (!sent) {
     status.needsSignIn = true;
     return false;
   }
 
   // A network failure propagates: being offline is not a reason to ask for a password.
-  const response = await fetch('/api/auth/refresh', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: oldRefreshToken }),
-    signal: AbortSignal.timeout(authTimeout)
-  });
-  if (response.status === 401 || response.status === 400) {
+  const wake = AbortSignal.any([AbortSignal.timeout(wakeTimeout), ...(signal ? [signal] : [])]);
+  await fetch('/api/$metadata', { method: 'HEAD', cache: 'no-store', signal: wake });
+  let response = await postRefresh(sent);
+  if (response.status === 401) {
+    // Another copy of the app (a second tab, say) may have used the token first and saved the next one.
+    const latest = await getMeta<string>('refreshToken');
+    if (latest && latest !== sent) response = await postRefresh(latest);
+  }
+  // Only a rejected token means signing in again. Anything else is the server having a bad moment.
+  if (response.status === 401) {
     status.needsSignIn = true;
     return false;
   }
   if (!response.ok) throw new Error(`Refresh failed (${response.status})`);
 
   const body = await response.json();
-  useAccessToken(body.accessToken);
   await setMeta('refreshToken', body.refreshToken);
+  useAccessToken(body.accessToken);
+  status.needsSignIn = false;
   return true;
+}
+
+function postRefresh(refreshToken: string) {
+  return fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: refreshToken }),
+    signal: AbortSignal.timeout(refreshTimeout)
+  });
 }
 
 function useAccessToken(token: string) {
