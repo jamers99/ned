@@ -2,8 +2,31 @@ import type { BabyEvent, SettledBy } from './db.ts';
 import { byStart, dayOf, wakingsDuring } from './sleep.ts';
 import { atMinuteOfDay, day, hour, minute, minuteOfDay, startOfDay } from './time.ts';
 
-const loggedNights = (events: BabyEvent[]) =>
-  events.filter(e => e.Type === 'Sleep' && e.IsNight && !e.Deleted && e.End != null).sort(byStart);
+interface Night {
+  /** The morning it ended, as the Day screen files it. */
+  morning: number;
+  /** Bedtime: when its first piece started. */
+  start: number;
+  /**
+   * Its night sleeps. Usually one, but a night can be logged in pieces (Nara did, and Ned can after an early
+   * Up for the day), and a piece marked night by mistake can land on the same morning.
+   */
+  pieces: BabyEvent[];
+}
+
+/** Finished nights, oldest first: the night sleeps that end on the same morning count as one night. */
+function loggedNights(events: BabyEvent[]): Night[] {
+  const nights = new Map<number, Night>();
+  for (const sleep of events.filter(e => e.Type === 'Sleep' && e.IsNight && !e.Deleted && e.End != null).sort(byStart)) {
+    const morning = dayOf(sleep);
+    const night = nights.get(morning);
+    if (night) night.pieces.push(sleep);
+    else nights.set(morning, { morning, start: sleep.Start, pieces: [sleep] });
+  }
+  return [...nights.values()];
+}
+
+const wakingsIn = (night: Night, events: BabyEvent[]) => night.pieces.flatMap(piece => wakingsDuring(piece, events));
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -20,13 +43,16 @@ function longestNightStretches(events: BabyEvent[]): Map<number, number> {
   const stretches = new Map<number, number>();
 
   for (const night of loggedNights(live)) {
-    let from = night.Start;
     let longest = 0;
-    for (const waking of wakingsDuring(night, live)) {
-      longest = Math.max(longest, waking.Start - from);
-      from = waking.End ?? waking.Start;
+    for (const piece of night.pieces) {
+      let from = piece.Start;
+      for (const waking of wakingsDuring(piece, live)) {
+        longest = Math.max(longest, waking.Start - from);
+        from = waking.End ?? waking.Start;
+      }
+      longest = Math.max(longest, piece.End! - from);
     }
-    stretches.set(dayOf(night), Math.max(longest, night.End! - from));
+    stretches.set(night.morning, longest);
   }
 
   const nightFeeds = new Map<number, number[]>();
@@ -65,9 +91,9 @@ export function stretchByMonth(events: BabyEvent[]): { label: string; hours: num
 /** Average bedtime over the last week and how much it varies (standard deviation, in minutes). */
 export function bedtimeStats(events: BabyEvent[], now: number): { average: number; spreadMinutes: number } | null {
   const bedtimes = loggedNights(events)
-    .filter(e => e.Start > now - 7 * day)
-    .map(e => {
-      const m = minuteOfDay(e.Start);
+    .filter(night => night.start > now - 7 * day)
+    .map(night => {
+      const m = minuteOfDay(night.start);
       return m < 12 * 60 ? m + 24 * 60 : m;
     });
   if (bedtimes.length < 2) return null;
@@ -79,10 +105,10 @@ export function bedtimeStats(events: BabyEvent[], now: number): { average: numbe
 
 /** Night wakings per night over the last week, and the most common way she got back to sleep. */
 export function wakingStats(events: BabyEvent[], now: number) {
-  const nights = loggedNights(events).filter(e => e.Start > now - 7 * day);
+  const nights = loggedNights(events).filter(night => night.start > now - 7 * day);
   if (nights.length === 0) return null;
 
-  const wakings = nights.flatMap(night => wakingsDuring(night, events));
+  const wakings = nights.flatMap(night => wakingsIn(night, events));
   const counts = new Map<SettledBy, number>();
   for (const waking of wakings)
     if (waking.SettledBy) counts.set(waking.SettledBy, (counts.get(waking.SettledBy) ?? 0) + 1);
@@ -113,10 +139,10 @@ export function bestLastWakeWindow(events: BabyEvent[]): WakeWindowPattern {
 
   for (const night of loggedNights(live)) {
     const lastNap = naps
-      .filter(nap => nap.End! <= night.Start && nap.End! > night.Start - 12 * hour)
+      .filter(nap => nap.End! <= night.start && nap.End! > night.start - 12 * hour)
       .sort((a, b) => a.End! - b.End!)
       .at(-1);
-    if (lastNap) samples.push({ window: night.Start - lastNap.End!, wakings: wakingsDuring(night, live).length });
+    if (lastNap) samples.push({ window: night.start - lastNap.End!, wakings: wakingsIn(night, live).length });
   }
   if (samples.length < nightsNeededForPattern) return { ready: false, nights: samples.length };
 
