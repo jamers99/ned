@@ -77,7 +77,7 @@ describe('day timeline', () => {
     const timeline = dayTimeline(events, at(8, '00:00'), at(9, '12:00'));
 
     expect(timeline.rows.map(r => (r.kind === 'window' ? r.label : r.kind === 'sleep' ? r.label : r.event.Type))).toEqual([
-      'Night', 'Feed', 'NightWaking', 'Awake 2h 25m', 'Feed', 'Nap 1', 'Awake 2h 30m', 'Nap 2', 'Awake 5h 30m until bedtime'
+      'Night', 'Awake 2h 25m', 'Feed', 'Nap 1', 'Awake 2h 30m', 'Nap 2', 'Awake 5h 30m until bedtime'
     ]);
     expect(timeline).toMatchObject({ napCount: 2, feedCount: 2, nursingTotal: 22 * 60_000 });
     expect(dayTimeline(events, at(7, '00:00'), at(9, '12:00')).rows).toEqual([]);
@@ -94,5 +94,30 @@ describe('day timeline', () => {
 
     const friday = dayTimeline(events, at(9, '00:00'), at(9, '12:00')).rows;
     expect(friday[0]).toMatchObject({ kind: 'sleep', label: 'Night', event: nextNight });
+  });
+
+  it('groups what happened during a night inside it, in time order, and still counts the feeds', () => {
+    // A feed started a minute before the waking it belongs to, then solids after the night.
+    const feed = event({ Type: 'Feed', FeedKind: 'Nursing', Start: at(8, '06:05'), End: at(8, '06:14'), LeftSeconds: 240, RightSeconds: 240 });
+    const wake = event({ Type: 'NightWaking', Start: at(8, '06:06'), End: at(8, '06:14'), SettledBy: 'Feeding' });
+    const longNight = event({ Type: 'Sleep', IsNight: true, Start: at(7, '22:20'), End: at(8, '08:30') });
+    const solids = event({ Type: 'Solids', Start: at(8, '09:20'), End: at(8, '09:20'), Foods: ['Egg'] });
+    const timeline = dayTimeline([solids, wake, feed, longNight], at(8, '00:00'), at(8, '10:00'));
+
+    expect(timeline.rows.map(r => r.kind)).toEqual(['sleep', 'event']);
+    expect(timeline.rows[0]).toMatchObject({ kind: 'sleep', event: longNight, during: [feed, wake] });
+    expect(timeline).toMatchObject({ feedCount: 1, nursingTotal: 8 * 60_000 });
+    expect(timeline.sleepTotal).toBe(at(8, '08:30') - at(7, '22:20') - 8 * 60_000);
+  });
+
+  it('groups into a running sleep until now, and into a nap', () => {
+    const running = event({ Type: 'Sleep', IsNight: true, Start: at(7, '19:05') });
+    const wake = event({ Type: 'NightWaking', Start: at(8, '02:14') });
+    expect(dayTimeline([running, wake], at(8, '00:00'), at(8, '03:00')).rows)
+      .toEqual([expect.objectContaining({ kind: 'sleep', during: [wake] })]);
+
+    const note = event({ Type: 'Note', Start: at(8, '09:30'), Text: 'Stirred' });
+    const rows = dayTimeline([night, nap1, note], at(8, '00:00'), at(8, '12:00')).rows;
+    expect(rows.at(-1)).toMatchObject({ kind: 'sleep', event: nap1, during: [note] });
   });
 });

@@ -137,7 +137,7 @@ export function dayOf(e: BabyEvent): number {
 }
 
 export type DayRow =
-  | { kind: 'sleep'; event: BabyEvent; label: string; asleep: number; wakings: BabyEvent[] }
+  | { kind: 'sleep'; event: BabyEvent; label: string; asleep: number; wakings: BabyEvent[]; during: BabyEvent[] }
   | { kind: 'window'; label: string }
   | { kind: 'event'; event: BabyEvent };
 
@@ -152,7 +152,8 @@ export interface DayTimeline {
 
 /**
  * Everything that belongs to one day, in order, with awake gaps between sleeps shown as wake windows.
- * Anything logged during a night (a waking, a night feed) belongs to that night's morning.
+ * Anything logged during a night (a waking, a night feed) belongs to that night's morning, and anything logged
+ * during a sleep is grouped in that sleep's row (`during`), so a night reads as one block.
  */
 export function dayTimeline(events: BabyEvent[], dayStart: number, now: number): DayTimeline {
   const nights = events.filter(e => isSleep(e) && e.IsNight);
@@ -162,6 +163,11 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
   };
   const own = events.filter(e => !e.Deleted && dayFor(e) === dayStart).sort(byStart);
   const timeline: DayTimeline = { rows: [], sleepTotal: 0, napCount: 0, napTotal: 0, feedCount: 0, nursingTotal: 0 };
+  const sleepRows: Extract<DayRow, { kind: 'sleep' }>[] = [];
+  // The sleep an event happened in. A night wins if a nap overlaps it.
+  const sleepRowAround = (e: BabyEvent) => sleepRows
+    .filter(r => e.Start >= r.event.Start && e.Start < (r.event.End ?? now))
+    .sort((a, b) => Number(b.event.IsNight) - Number(a.event.IsNight))[0];
   let previousSleepEnd: number | null = null;
   let windowSlot = 0;
 
@@ -182,7 +188,9 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       }
 
       const label = event.IsNight ? 'Night' : `Nap ${timeline.napCount}`;
-      timeline.rows.push({ kind: 'sleep', event, label, asleep, wakings });
+      const row = { kind: 'sleep' as const, event, label, asleep, wakings, during: [] as BabyEvent[] };
+      sleepRows.push(row);
+      timeline.rows.push(row);
       previousSleepEnd = event.End;
       windowSlot = timeline.rows.length;
       continue;
@@ -191,6 +199,11 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
     if (event.Type === 'Feed') {
       timeline.feedCount++;
       timeline.nursingTotal += (event.LeftSeconds + event.RightSeconds) * 1000;
+    }
+    const around = sleepRowAround(event);
+    if (around) {
+      around.during.push(event);
+      continue;
     }
     timeline.rows.push({ kind: 'event', event });
     if (previousSleepEnd != null && event.Start < previousSleepEnd) windowSlot = timeline.rows.length;
