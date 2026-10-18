@@ -4,8 +4,6 @@
   import { lastSyncedText, oldestUnpushed, syncIsStale } from '../lib/sync.ts';
   import Icon, { type IconName } from './Icon.svelte';
 
-  let { dark = false }: { dark?: boolean } = $props();
-
   const tabs: { tab: Tab; label: string; icon: IconName }[] = [
     { tab: 'now', label: 'Now', icon: 'clock' },
     { tab: 'day', label: 'Day', icon: 'list' },
@@ -18,7 +16,7 @@
   const synced = $derived(lastSyncedText(clock.now));
 </script>
 
-<nav class:dark>
+<nav>
   <span></span>
   {#each tabs as { tab, label, icon } (tab)}
     <button class:active={nav.tab === tab} aria-current={nav.tab === tab ? 'page' : undefined}
@@ -92,22 +90,5 @@
     height: 7px;
     border-radius: 50%;
     background: var(--terra);
-  }
-
-  nav.dark {
-    background: var(--sleep-bg);
-    border-top-color: var(--sleep-line);
-  }
-
-  nav.dark button {
-    color: var(--moss-mist);
-  }
-
-  nav.dark button.active {
-    color: var(--on-sleep);
-  }
-
-  nav.dark .sync.stale {
-    color: var(--peach);
   }
 </style>
