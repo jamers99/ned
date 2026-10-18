@@ -128,20 +128,31 @@ type Options = {
   startAt: number;
   /** Start with the three days of history, as a guest. Off: a fresh install at the sign-in screen. */
   seeded: boolean;
+  /**
+   * Signed in as this parent instead of a guest, last synced two hours ago. There is no server behind the tests,
+   * so every sync fails and the sync cloud asks for attention.
+   */
+  user: string;
 };
 
 export const test = base.extend<Options & { app: App }>({
   startAt: [now, { option: true }],
   seeded: [true, { option: true }],
+  user: ['', { option: true }],
   // Automatic, so a test that only asks for `page` still gets the app opened and seeded.
-  app: [async ({ page, startAt, seeded }, use) => {
+  app: [async ({ page, startAt, seeded, user }, use) => {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.clock.install({ time: startAt });
     await page.goto('/');
     await expect(page.getByText('Try it without an account')).toBeVisible();
     if (seeded)
-      await seed(page, { events: history(), foods: await foods(), growth, meta: [{ key: 'guest', value: true }] });
+      await seed(page, {
+        events: history(), foods: await foods(), growth,
+        meta: user
+          ? [{ key: 'user', value: user }, { key: 'refreshToken', value: 'spent' }, { key: 'lastSyncedAt', value: startAt - 2 * 3_600_000 }]
+          : [{ key: 'guest', value: true }]
+      });
 
     await use(new App(page));
     expect(errors, 'errors on the page').toEqual([]);

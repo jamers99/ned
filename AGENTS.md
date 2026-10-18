@@ -64,7 +64,7 @@ The client owns an outbox. Server is a dumb, reliable store.
 4. **Deletes are soft:** set `Deleted = true` and push. ⚠️ There is deliberately **no** global query filter on `Deleted`, so the standard OData pull returns deleted rows and deletions reach the other phone. Don't add one; filter on the phone instead.
 5. **Conflicts:** last write (server `ModifiedAt`) wins. Two users, rarely editing the same row — keep it simple.
 6. A running timer is just a row with `End = null`, so the other phone sees it after the next sync.
-7. **Sync indicator:** a quiet cloud at the right end of the tab bar (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
+7. **Sync indicator:** a quiet cloud in Now's header, just left of Settings (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
 
 ## Auth
 

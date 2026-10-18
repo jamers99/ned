@@ -25,6 +25,21 @@ test.describe('late afternoon without nap 2', () => {
   });
 });
 
+test.describe('signed in', () => {
+  test.use({ user: 'Natalie' });
+
+  test('a sync failing for over an hour turns the cloud beside Settings terracotta', async ({ app, page }) => {
+    const cloud = app.button('Not synced. Synced at 11:00 AM');
+    await expect(cloud).toBeVisible();
+    await cloud.click();
+    await expect(page.locator('.overlay')).toContainText('Settings');
+    await app.button('Close').click();
+
+    await app.button('Day').click();
+    await expect(cloud).toHaveCount(0);
+  });
+});
+
 test.describe('fresh install', () => {
   test.use({ seeded: false });
 
