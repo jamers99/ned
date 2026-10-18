@@ -63,29 +63,31 @@
       <div class="rows">
         {#each timeline.rows as row, i (row.kind === 'window' ? `window-${i}` : row.event.Guid)}
           {#if row.kind === 'sleep'}
-            <!-- What happened during a sleep (wakings, night feeds) sits inside it, so a night reads as one block. -->
-            <div class="sleep">
-              <button class="sleep-head" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
-                <span class="left">
-                  <span class="serif sleep-label">{row.label}</span>
-                  <span class="sleep-meta">
-                    {row.event.End ? clockRange(row.event.Start, row.event.End) : `Since ${clockTime(row.event.Start)}`}
-                    {#if sleepMeta(row.event, row.wakings)} · {sleepMeta(row.event, row.wakings)}{/if}
-                  </span>
+            <button class="sleep" onclick={() => open({ kind: 'edit', guid: row.event.Guid })}>
+              <span class="left">
+                <span class="serif sleep-label">{row.label}</span>
+                <span class="sleep-meta">
+                  {row.event.End ? clockRange(row.event.Start, row.event.End) : `Since ${clockTime(row.event.Start)}`}
+                  {#if sleepMeta(row.event, row.wakings)} · {sleepMeta(row.event, row.wakings)}{/if}
                 </span>
-                <span class="serif sleep-duration">{duration(row.asleep)}</span>
-              </button>
-              {#each row.during as event (event.Guid)}
-                {@const text = describe(event, now)}
-                <button class="during" onclick={() => open({ kind: 'edit', guid: event.Guid })}>
-                  <span class="left">
-                    <span class="during-label">{text.label}</span>
-                    {#if text.meta}<span class="during-meta">{text.meta}</span>{/if}
-                  </span>
-                  <span class="during-time">{text.time}</span>
-                </button>
-              {/each}
-            </div>
+              </span>
+              <span class="serif sleep-duration">{duration(row.asleep)}</span>
+            </button>
+            <!-- What happened during a sleep (wakings, night feeds) hangs off it on a moss line, so a night reads as one. -->
+            {#if row.during.length}
+              <div class="during">
+                {#each row.during as event (event.Guid)}
+                  {@const text = describe(event, now)}
+                  <button class="event" onclick={() => open({ kind: 'edit', guid: event.Guid })}>
+                    <span class="left">
+                      <span class="event-label">{text.label}</span>
+                      {#if text.meta}<span class="event-meta">{text.meta}</span>{/if}
+                    </span>
+                    <span class="event-time">{text.time}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
           {:else if row.kind === 'window'}
             <div class="window"><span class="line"></span>{row.label}</div>
           {:else}
@@ -182,65 +184,21 @@
   }
 
   .sleep {
-    border-radius: 20px;
-    background: var(--moss);
-    color: var(--on-moss);
-    overflow: hidden;
-  }
-
-  .sleep:has(.sleep-head:active) {
-    transform: scale(0.99);
-  }
-
-  .rows .sleep-head:active,
-  .rows .during:active {
-    transform: none;
-  }
-
-  .sleep-head {
     min-height: 60px;
     border: 0;
+    border-radius: 20px;
     padding: 13px 16px;
-    background: none;
+    background: var(--moss);
+    color: var(--on-moss);
   }
 
-  /* Indented under the sleep, on the same moss, with a hairline between rows. */
   .during {
-    min-height: 44px;
-    border: 0;
-    border-top: 1px solid var(--sleep-line);
-    padding: 7px 16px 7px 28px;
-    background: none;
-  }
-
-  .during:last-child {
-    padding-bottom: 9px;
-  }
-
-  .during:active {
-    background: var(--sleep-tint);
-  }
-
-  .during-label {
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .during-meta,
-  .during-time {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--on-moss-soft);
-  }
-
-  .during-meta {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .during-time {
-    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-left: 16px;
+    padding-left: 12px;
+    border-left: 2px solid var(--moss-pale);
   }
 
   .sleep-label {

@@ -3,20 +3,19 @@
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, endFeed, startRunning, startSleep, updateEvent } from '../lib/actions.ts';
+  import { addEvent, endFeed, startRunning, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
   import { locationText, nursedSeconds, onsetChoices, settleChoices } from '../lib/describe.ts';
   import { open } from '../lib/nav.svelte.ts';
   import {
-    askStillAsleep, isNightTime, latestRunning, napNumber, nextSleep, pastWaking, timeAsleep, typicalNapRange,
-    wakingsDuring, type SleepTargets
+    askStillAsleep, latestRunning, napNumber, pastWaking, timeAsleep, typicalNapRange, wakingsDuring
   } from '../lib/sleep.ts';
   import { clock, stillAsleep } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, endAfter, minute, stopwatch } from '../lib/time.ts';
 
-  // A drawer like Feed: start a sleep (now, or earlier if it was missed), follow it, and end it.
+  // A drawer like Feed: the Sleep button starts the sleep, and this follows it and ends it.
   // A nap is stop and start: Woke up ends it. A night has wakings in it, and ends with Up for the day.
-  let { events, targets }: { events: BabyEvent[]; targets: SleepTargets } = $props();
+  let { events }: { events: BabyEvent[] } = $props();
 
   const now = $derived(clock.now);
   const sleep = $derived(latestRunning(events, 'Sleep'));
@@ -27,12 +26,6 @@
   const askAwake = $derived(sleep != null &&
     askStillAsleep(sleep, events, now, stillAsleep.guid === sleep.Guid ? stillAsleep.at : 0));
 
-  // Before it starts: when she fell asleep. Now, unless it was missed and picked on the wheel.
-  let fellAsleepAt = $state<number | null>(null);
-  const startAt = $derived(fellAsleepAt ?? now);
-  const startsNight = $derived(isNightTime(startAt, targets));
-  const next = $derived(sleep ? null : nextSleep(events, targets));
-
   // What she's had during this waking: a feed settles her "by feeding" without asking.
   const during = $derived(waking ? events.filter(e => e.Start >= waking.Start && e.Type !== 'NightWaking' && e.Type !== 'Sleep') : []);
   const feeding = $derived(during.find(e => e.Type === 'Feed' && e.End == null));
@@ -41,15 +34,6 @@
   const fed = $derived(feeding != null || during.some(e => e.Type === 'Feed'));
 
   const places = Object.entries(locationText) as [SleepLocation, string][];
-
-  function pickStart(start: number) {
-    fellAsleepAt = start > Date.now() ? start - day : start;
-  }
-
-  function start() {
-    void startSleep(fellAsleepAt ?? Date.now(), startsNight);
-    fellAsleepAt = null;
-  }
 
   function toggle(changes: Partial<BabyEvent>) {
     if (sleep) void updateEvent(sleep.Guid, changes);
@@ -102,36 +86,7 @@
 </script>
 
 <Overlay {title}>
-  {#if !sleep}
-    <!-- Starting: one tap for now; a sleep that was missed can start earlier. -->
-    {#if next}
-      <div class="callout">
-        <Icon name="moon" stroke="var(--moss-deep)" width={1.8} />
-        <div>
-          <div class="callout-title">
-            {#if next.kind === 'nap'}Nap {next.napNumber} window {clockShort(next.from)}–{clockTime(next.to)}
-            {:else}Bedtime {clockTime(next.from)}{/if}
-          </div>
-          <div class="callout-note">Awake {duration(now - next.awakeSince)}</div>
-        </div>
-      </div>
-    {/if}
-
-    <div class="fell-asleep">
-      <TimeInput class="time" value={startAt} onchange={pickStart} label="Fell asleep at">
-        <span class="time-label">Fell asleep</span>
-        <span class="time-value">{fellAsleepAt == null ? 'Now' : clockTime(fellAsleepAt)}</span>
-      </TimeInput>
-      {#if fellAsleepAt != null}
-        <button class="pill" onclick={() => (fellAsleepAt = null)}>Use now</button>
-      {/if}
-    </div>
-
-    <button class="start" onclick={start}>
-      <Icon name="moonStar" size={28} stroke="var(--on-moss)" width={1.8} />
-      {startsNight ? 'Start night' : 'Start nap'}
-    </button>
-  {:else if waking}
+  {#if sleep && waking}
     <!-- A night waking: log what she needs, then put her back to sleep. -->
     <section class="timer">
       <div class="dim">Waking {wakings.length} · awake for</div>
@@ -143,12 +98,12 @@
       </TimeInput>
     </section>
 
-    <button class="huge feed" onclick={() => open({ kind: 'feed' })}>
+    <button class="huge feed" onclick={() => open({ kind: 'feed', back: { kind: 'sleep' } })}>
       {feeding ? `Feeding · ${stopwatch(nursedSeconds(feeding, now) * 1000)}` : fed ? 'Feed again' : 'Feed'}
     </button>
     <div class="row">
-      <button class="quiet" onclick={() => open({ kind: 'solids' })}>Solids</button>
-      <button class="quiet" onclick={() => open({ kind: 'note' })}>Note</button>
+      <button class="quiet" onclick={() => open({ kind: 'solids', back: { kind: 'sleep' } })}>Solids</button>
+      <button class="quiet" onclick={() => open({ kind: 'note', back: { kind: 'sleep' } })}>Note</button>
     </div>
     {#if logged.length}<div class="dim small logged">{logged.join(' · ')}</div>{/if}
 
@@ -161,7 +116,7 @@
         <button class="huge settle" onclick={() => settled('Own')}>On {baby.their} own</button>
       </div>
     {/if}
-  {:else}
+  {:else if sleep}
     <section class="timer">
       <div class="dim">Asleep since {clockTime(sleep.Start)}</div>
       <div class="big serif">{duration(timeAsleep(sleep, wakings, now))}</div>
@@ -296,63 +251,6 @@
     letter-spacing: -0.04em;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-  }
-
-  .callout {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: var(--moss-soft);
-  }
-
-  .callout-title {
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--moss-deep);
-  }
-
-  .callout-note {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--moss-callout-note);
-  }
-
-  .fell-asleep {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .fell-asleep :global(.time) {
-    flex: 1;
-    height: 66px;
-    border-radius: 18px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 16px;
-    gap: 2px;
-  }
-
-  .start {
-    margin-top: auto;
-    height: 108px;
-    border: 0;
-    border-radius: 30px;
-    background: var(--moss);
-    color: var(--on-moss);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    font-family: var(--serif);
-    font-size: 26px;
-    font-weight: 600;
-    box-shadow: var(--button-shadow);
   }
 
   .ask {

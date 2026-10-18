@@ -49,12 +49,6 @@
   --peach: #F6D9C3;           /* Woke up / She's awake button */
   --peach-text: #5A2E1C;
 
-  /* Light text on deep moss: the sleep blocks on the Day view */
-  --sleep-bg: var(--moss-deep);
-  --on-sleep: #FCF9F3;
-  --sleep-tint: rgba(252, 249, 243, 0.08);
-  --sleep-line: rgba(252, 249, 243, 0.12);
-  --sleep-edge: rgba(252, 249, 243, 0.3);
   --scrim: rgba(58, 47, 37, 0.45);
 
   --serif: 'Fraunces', Georgia, serif;
@@ -100,11 +94,6 @@
   --peach: #241915;
   --peach-text: #F0B39D;
 
-  --sleep-bg: #0B0807;
-  --on-sleep: #E9A48C;
-  --sleep-tint: #140E0C;
-  --sleep-line: #3A2620;
-  --sleep-edge: #3A2620;
   --scrim: rgba(0, 0, 0, 0.6);
   color: var(--ink);
 }

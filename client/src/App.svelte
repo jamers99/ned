@@ -59,7 +59,7 @@
   </main>
 
   {#if overlay?.kind === 'sleep'}
-    <Sleep {events} {targets} />
+    <Sleep {events} />
   {:else if overlay?.kind === 'wakeWindow'}
     <WakeWindowSheet {events} {targets} />
   {:else if overlay?.kind === 'feed'}

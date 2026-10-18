@@ -4,7 +4,7 @@
   import { addEvent, endFeed, startRunning, switchSide, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
   import { sideSeconds } from '../lib/describe.ts';
-  import { close } from '../lib/nav.svelte.ts';
+  import { close, closeAll } from '../lib/nav.svelte.ts';
   import { keepScreenOn } from '../lib/screen.ts';
   import { latestRunning } from '../lib/sleep.ts';
   import { clock } from '../lib/state.svelte.ts';
@@ -58,18 +58,18 @@
     if (feed) void updateEvent(feed.Guid, { Start: start > Date.now() ? start - day : start });
   }
 
-  function save() {
+  function save(done = close) {
     if (kind === 'Bottle')
       void addEvent({ Type: 'Feed', FeedKind: 'Bottle', Start: bottleTime, End: bottleTime, BottleOz: bottleOz });
     else if (feed)
       void endFeed(feed);
-    close();
+    done();
   }
 
-  /** She fell asleep feeding: saves the feed and closes the waking in one tap. */
+  /** She fell asleep feeding: saves the feed and closes the waking in one tap. Nothing is left to do in the sleep drawer. */
   function asleep() {
     if (waking) void updateEvent(waking.Guid, { End: Date.now(), SettledBy: 'Feeding' });
-    save();
+    save(closeAll);
   }
 </script>
 
@@ -133,10 +133,10 @@
   {#if waking && (feed || kind === 'Bottle')}
     <div class="finish">
       <button class="primary-dark" onclick={asleep}>Asleep</button>
-      <button class="primary-light" onclick={save}>Save · still awake</button>
+      <button class="primary-light" onclick={() => save()}>Save · still awake</button>
     </div>
   {:else}
-    <button class="primary-dark save" onclick={save}>
+    <button class="primary-dark save" onclick={() => save()}>
       {kind === 'Bottle' ? 'Save bottle' : feed ? 'Done · save feed' : 'Close'}
     </button>
   {/if}

@@ -3,6 +3,7 @@
   import Icon from '../components/Icon.svelte';
   import TodayStrip from '../components/TodayStrip.svelte';
   import type { BabyEvent } from '../lib/db.ts';
+  import { startSleep } from '../lib/actions.ts';
   import { nursedSeconds } from '../lib/describe.ts';
   import { appear } from '../lib/motion.ts';
   import { open, showTab } from '../lib/nav.svelte.ts';
@@ -35,6 +36,12 @@
   // The last finished feed or solids, timed from when it started, like the gap between feeds is usually counted.
   const lastMeal = $derived(events.filter(e => (e.Type === 'Feed' || e.Type === 'Solids') && e.End != null).at(-1));
   const lastMealAgo = $derived(lastMeal ? now - lastMeal.Start : 0);
+
+  // One tap starts the sleep at now; the drawer that opens can move its start earlier, like Feed's.
+  async function sleepTapped() {
+    if (!sleeping) await startSleep(Date.now(), isNightTime(Date.now(), targets));
+    open({ kind: 'sleep' });
+  }
 
   function mealDetail(meal: BabyEvent): string {
     if (meal.Type === 'Solids') return meal.Foods.join(', ') || 'solids';
@@ -109,7 +116,7 @@
   {/if}
 
   <div class="actions">
-    <button class="action sleep" onclick={() => open({ kind: 'sleep' })}>
+    <button class="action sleep" onclick={sleepTapped}>
       <Icon name={waking ? 'sun' : 'moonStar'} size={28} stroke="var(--on-moss)" width={1.8} />
       <span class="action-label serif">{sleepTitle}</span>
       <span class="action-state">
