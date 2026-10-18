@@ -54,15 +54,9 @@
         <Icon name="sprig" size={24} stroke="var(--moss)" width={1.5} />
       </div>
     </div>
-    <!-- A note is rare, so it waits up here rather than taking a tile. -->
-    <div class="header-buttons">
-      <button class="round-button" aria-label="Note" onclick={() => open({ kind: 'note' })}>
-        <Icon name="pencil" size={20} />
-      </button>
-      <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
-        <Icon name="sliders" size={20} />
-      </button>
-    </div>
+    <button class="round-button" aria-label="Settings" onclick={() => open({ kind: 'settings' })}>
+      <Icon name="sliders" size={20} />
+    </button>
   </header>
 
   {#if sleeping}
@@ -138,16 +132,21 @@
     </button>
   </div>
 
-  <button class="card solids" onclick={() => open({ kind: 'solids' })}>
-    <Icon name="bowl" stroke="var(--terra-text)" />
-    <span class="solids-text">
-      <span class="solids-label">Solids</span>
-      {#if lastSolids}
-        <span class="solids-meta">Ate {ago(lastSolids.Start)}{lastSolids.Foods.length ? ` · ${lastSolids.Foods.join(', ')}` : ''}</span>
-      {/if}
-    </span>
-    <Icon name="plus" size={20} stroke="var(--muted)" />
-  </button>
+  <!-- Solids says when she last ate. A note is rare, so it gets a small square beside it. -->
+  <div class="more">
+    <button class="card solids" onclick={() => open({ kind: 'solids' })}>
+      <Icon name="bowl" stroke="var(--terra-text)" />
+      <span class="solids-text">
+        <span class="solids-label">Solids</span>
+        {#if lastSolids}
+          <span class="solids-meta">Ate {ago(lastSolids.Start)}{lastSolids.Foods.length ? ` · ${lastSolids.Foods.join(', ')}` : ''}</span>
+        {/if}
+      </span>
+    </button>
+    <button class="card note" aria-label="Note" onclick={() => open({ kind: 'note' })}>
+      <Icon name="pencil" stroke="var(--terra-text)" />
+    </button>
+  </div>
 
   <TodayStrip {events} {now} />
 </div>
@@ -333,12 +332,14 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 35%, transparent);
   }
 
-  .header-buttons {
+  .more {
     display: flex;
-    gap: 8px;
+    gap: 10px;
   }
 
   .solids {
+    flex: 1;
+    min-width: 0;
     min-height: 64px;
     padding: 10px 18px;
     border-radius: 22px;
@@ -348,8 +349,17 @@
     text-align: left;
   }
 
-  .solids:active {
-    transform: scale(0.99);
+  .note {
+    width: 64px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .solids:active,
+  .note:active {
+    transform: scale(0.97);
   }
 
   .solids-text {
