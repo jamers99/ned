@@ -12,7 +12,7 @@ const syncTimeout = 30_000;
 // Rows are stamped before their transaction commits, so a slow save can land just behind the cursor.
 // Re-reading a minute of overlap catches it; unchanged rows are skipped.
 const pullOverlap = 60_000;
-// How long the phone can go without syncing before the indicator in the tab bar asks for attention.
+// How long the phone can go without syncing before the sync cloud on Now asks for attention.
 const staleAfter = 60 * 60_000;
 
 let running: Promise<void> | null = null;
