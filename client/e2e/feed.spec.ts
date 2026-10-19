@@ -44,6 +44,21 @@ test('solids adds a new food and it shows on Now and in Recent', async ({ app, p
   await expect(page.locator('.group', { hasText: 'Recent' })).toContainText('Kiwi');
 });
 
+test('picking a searched food clears the search and keeps it focused', async ({ app, page }) => {
+  await page.locator('button.solids').click();
+  const search = page.getByLabel('Find or add a food');
+  await search.fill('mang');
+  await app.button('Mango').click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+
+  await search.fill('Kiwi');
+  await app.button('Add “Kiwi”').click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+  await expect(app.button('Save · 2 foods')).toBeVisible();
+});
+
 test('a note is saved from the square beside Solids', async ({ app, page }) => {
   await app.button('Note').click();
   await page.getByRole('textbox', { name: 'Note' }).fill('First tooth!');
