@@ -14,6 +14,7 @@
   const foods = $derived(known.value.filter(f => !f.Deleted).sort((a, b) => (b.LastUsedAt ?? 0) - (a.LastUsedAt ?? 0)));
 
   let query = $state('');
+  let search: HTMLInputElement;
   let tab = $state<keyof typeof foodPresets>('Fruit');
   let selected = $state<string[]>([]);
   let amount = $state<SolidAmount | null>(null);
@@ -38,9 +39,11 @@
     selected = isSelected(name) ? selected.filter(s => !same(s, name)) : [...selected, name];
   }
 
-  function addTyped() {
-    toggle(query.trim());
+  // Picking from the search clears it and keeps the keyboard up for the next food.
+  function pick(name: string) {
+    toggle(name);
     query = '';
+    search.focus();
   }
 
   function categoryOf(name: string): FoodCategory {
@@ -57,8 +60,8 @@
   }
 </script>
 
-{#snippet chip(name: string)}
-  <button class="chip" class:on={isSelected(name)} onclick={() => toggle(name)}>
+{#snippet chip(name: string, onpick = toggle)}
+  <button class="chip" class:on={isSelected(name)} onclick={() => onpick(name)}>
     {#if isSelected(name)}<Icon name="check" size={14} width={3} />{/if}{name}
   </button>
 {/snippet}
@@ -66,15 +69,16 @@
 <Overlay title="Solids">
   <label class="search">
     <Icon name="search" size={18} stroke="var(--muted)" width={2} />
-    <input placeholder="Find or add a food" aria-label="Find or add a food" bind:value={query}
-      enterkeyhint="done" onkeydown={e => e.key === 'Enter' && canAdd && addTyped()} />
+    <input placeholder="Find or add a food" aria-label="Find or add a food" bind:value={query} bind:this={search}
+      enterkeyhint="done" onkeydown={e => e.key === 'Enter' && canAdd && pick(query.trim())} />
   </label>
 
   {#if query.trim()}
-    <div class="chips">
-      {#each matches as name (name)}{@render chip(name)}{/each}
+    <!-- Taps don't take focus from the search, so the keyboard stays open. -->
+    <div class="chips" role="presentation" onmousedown={e => e.preventDefault()}>
+      {#each matches as name (name)}{@render chip(name, pick)}{/each}
       {#if canAdd}
-        <button class="chip add" onclick={addTyped}><Icon name="plus" size={14} width={2.4} />Add “{query.trim()}”</button>
+        <button class="chip add" onclick={() => pick(query.trim())}><Icon name="plus" size={14} width={2.4} />Add “{query.trim()}”</button>
       {/if}
     </div>
   {:else}
