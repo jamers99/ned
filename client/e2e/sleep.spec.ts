@@ -92,4 +92,20 @@ test.describe('a night', () => {
     await app.button('Up for the day').click();
     await expect(page.getByText('Night saved')).toBeVisible();
   });
+
+  test('up for the day during a waking ends the night when she woke, and leaves no stray waking', async ({ app, page }) => {
+    await app.sleepButton.click();
+    await app.wait(600);
+    await app.button("She's awake").click();
+    await app.wait(1);
+    await app.button('Up for the day').click();
+    await expect(page.locator('.time-value').last()).toHaveText('7:00 AM');
+
+    // Woke a bit earlier than that: still no waking left outside the night.
+    await app.pickTime('Woke at', '06:45');
+    await app.done();
+    await app.button('Day').click();
+    await expect(page.locator('.during')).toHaveCount(0);
+    await expect(page.getByText(/^Woke ·/)).toBeHidden();
+  });
 });

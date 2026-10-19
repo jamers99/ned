@@ -1,7 +1,7 @@
 <script lang="ts">
   import Sheet from '../components/Sheet.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { deleteEvent, updateEvent } from '../lib/actions.ts';
+  import { deleteEvent, updateEvent, updateSleep } from '../lib/actions.ts';
   import { db, type BabyEvent, type SettledBy, type Side, type SleepLocation, type SleepOnset, type SolidAmount,
     type WakeMood } from '../lib/db.ts';
   import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
@@ -25,17 +25,22 @@
     void updateEvent(guid, changes);
   }
 
+  /** Changes the times. A sleep's wakings stay inside it. */
+  function setTimes(changes: Partial<Pick<BabyEvent, 'Start' | 'End'>>) {
+    void (e?.Type === 'Sleep' ? updateSleep(guid, changes) : updateEvent(guid, changes));
+  }
+
   function setStart(start: number) {
     if (!e) return;
     // A sleep or waking keeps its end, so its start lands before it. A feed, solids or note moves whole.
-    if (e.Type === 'Sleep' || e.Type === 'NightWaking') set({ Start: start > (e.End ?? Date.now()) ? start - day : start });
+    if (e.Type === 'Sleep' || e.Type === 'NightWaking') setTimes({ Start: start > (e.End ?? Date.now()) ? start - day : start });
     else moveTo(start);
   }
 
   /** Moves the whole entry, keeping its length. */
   function moveTo(start: number) {
     if (!e) return;
-    set({ Start: start, End: e.End == null ? null : e.End + (start - e.Start) });
+    setTimes({ Start: start, End: e.End == null ? null : e.End + (start - e.Start) });
   }
 
   function setDate(start: number) {
@@ -47,7 +52,7 @@
 
   function setEnd(end: number) {
     if (!e) return;
-    set({ End: endAfter(e.Start, end) });
+    setTimes({ End: endAfter(e.Start, end) });
   }
 
   function remove() {
