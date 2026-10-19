@@ -2,7 +2,7 @@
 // The UI re-renders from Dexie, so nothing waits on the network.
 import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings, type Side } from './db.ts';
 import { foodGuid, settingsGuid } from './ids.ts';
-import { targetsFrom } from './sleep.ts';
+import { targetsFrom, wakingsDuring } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
 import { day } from './time.ts';
@@ -58,6 +58,26 @@ export async function updateEvent(guid: string, changes: Partial<BabyEvent>) {
 
 export async function deleteEvent(guid: string) {
   await updateEvent(guid, { Deleted: true });
+}
+
+/**
+ * Changes a sleep's times and keeps its wakings inside it: a waking it no longer covers is deleted, and one
+ * running past its new end stops there. A sleep moved whole takes its wakings along.
+ */
+export async function updateSleep(guid: string, changes: Partial<Pick<BabyEvent, 'Start' | 'End'>>) {
+  const sleep = await db.events.get(guid);
+  if (!sleep) return;
+  const wakings = wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray());
+  const start = changes.Start ?? sleep.Start;
+  const end = (changes.End === undefined ? sleep.End : changes.End) ?? Infinity;
+  const shift = start - sleep.Start;
+  const whole = shift !== 0 && sleep.End != null && end - sleep.End === shift;
+  await updateEvent(guid, changes);
+  for (const w of wakings) {
+    if (whole) await updateEvent(w.Guid, { Start: w.Start + shift, End: w.End == null ? null : w.End + shift });
+    else if (w.Start < start || w.Start >= end) await deleteEvent(w.Guid);
+    else if ((w.End ?? Infinity) > end) await updateEvent(w.Guid, { End: end });
+  }
 }
 
 /**

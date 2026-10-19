@@ -37,6 +37,16 @@ public static class NedMcp
         if (!string.IsNullOrEmpty(oauth.PublicOrigin))
             builder.Configuration["Client:BaseUrls:0"] = oauth.PublicOrigin;
 
+        // The MCP tools call /api over a socket to this server, at the address it listens on. Azure's container
+        // has no IPv6 loopback, so listening on any address ([::]) makes that call dial [::1] and fail.
+        // Listening on 0.0.0.0 makes it dial 127.0.0.1.
+        var urls = builder.Configuration["URLS"];
+        if (string.IsNullOrEmpty(urls) && builder.Configuration["HTTP_PORTS"] is { Length: > 0 } ports)
+            urls = string.Join(';', ports.Split(';').Select(port => $"http://*:{port}"));
+        if (!string.IsNullOrEmpty(urls))
+            builder.WebHost.UseUrls([.. urls.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(url => url
+                .Replace("://[::]", "://0.0.0.0").Replace("://*", "://0.0.0.0").Replace("://+", "://0.0.0.0"))]);
+
         builder.Services
             .AddCoreOAuth(o =>
             {

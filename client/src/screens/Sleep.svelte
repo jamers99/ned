@@ -3,7 +3,7 @@
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, deleteEvent, endFeed, startRunning, updateEvent } from '../lib/actions.ts';
+  import { addEvent, deleteEvent, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
   import { locationText, nursedSeconds, onsetChoices, settleChoices } from '../lib/describe.ts';
   import { closeAll, open } from '../lib/nav.svelte.ts';
@@ -47,8 +47,8 @@
 
   function wokeUp(end = Date.now()) {
     if (!sleep) return;
-    if (waking) void updateEvent(waking.Guid, { End: end });
-    void updateEvent(sleep.Guid, { End: end });
+    // Up for the day during a waking: she never went back to sleep, so the night ended when she woke.
+    void updateSleep(sleep.Guid, { End: waking ? waking.Start : end });
     open({ kind: 'woke', guid: sleep.Guid });
   }
 
@@ -190,7 +190,7 @@
     </button>
 
     <div class="adjust-row">
-      <TimeInput class="pill" value={sleep.Start} onchange={t => updateEvent(sleep.Guid, { Start: earlier(t) })}
+      <TimeInput class="pill" value={sleep.Start} onchange={t => updateSleep(sleep.Guid, { Start: earlier(t) })}
         label="Sleep start time">
         Started {clockShort(sleep.Start)}
       </TimeInput>

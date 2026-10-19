@@ -2,7 +2,7 @@
   import Icon from '../components/Icon.svelte';
   import Sheet from '../components/Sheet.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { updateEvent } from '../lib/actions.ts';
+  import { updateEvent, updateSleep } from '../lib/actions.ts';
   import type { BabyEvent, WakeMood } from '../lib/db.ts';
   import { close } from '../lib/nav.svelte.ts';
   import { napNumber, nextSleep, timeAsleep, wakingsDuring, type SleepTargets } from '../lib/sleep.ts';
@@ -17,12 +17,12 @@
 
   function setStart(start: number) {
     if (!sleep?.End) return;
-    void updateEvent(guid, { Start: start > sleep.End ? start - day : start });
+    void updateSleep(guid, { Start: start > sleep.End ? start - day : start });
   }
 
   function setEnd(end: number) {
     if (!sleep) return;
-    void updateEvent(guid, { End: endAfter(sleep.Start, end) });
+    void updateSleep(guid, { End: endAfter(sleep.Start, end) });
   }
 </script>
 
