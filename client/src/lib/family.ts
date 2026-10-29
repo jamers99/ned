@@ -1,7 +1,7 @@
 import { editStamp } from './actions.ts';
 import { apiFetch, messageFrom } from './auth.ts';
 import { db, getMeta, setMeta } from './db.ts';
-import { firstFamily, foodGuid, oldSettingsGuid } from './ids.ts';
+import { firstFamily, foodGuid } from './ids.ts';
 import { status } from './state.svelte.ts';
 
 export interface Family {
@@ -20,7 +20,6 @@ export async function loadFamily() {
   const family = await getMeta<KnownFamily>('family');
   status.family = family?.Guid ?? firstFamily;
   status.inviteCode = family?.InviteCode ?? '';
-  await moveOldSettings();
 }
 
 /** The family's one Settings row. */
@@ -70,16 +69,5 @@ export async function moveToFamily(from: string, to: string, keepSettings: boole
       await db.foods.delete(food.Guid);
       await db.foods.put({ ...food, Guid: guid, ModifiedAt: '', dirty: editStamp() });
     }
-  });
-}
-
-/** Before families, the one Settings row had a fixed Guid. It now belongs to the first family. */
-async function moveOldSettings() {
-  await db.transaction('rw', db.settings, async () => {
-    const old = await db.settings.get(oldSettingsGuid);
-    if (!old) return;
-    await db.settings.delete(oldSettingsGuid);
-    if (!(await db.settings.get(firstFamily)))
-      await db.settings.put({ ...old, Guid: firstFamily, ModifiedAt: '' });
   });
 }
