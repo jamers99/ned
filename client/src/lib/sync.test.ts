@@ -14,6 +14,7 @@ class FakeServer {
   familyHasSettings = true;
   clock = Date.UTC(2026, 9, 11, 12);
   onBatch: () => Promise<void> = async () => {};
+  onPull: () => void = () => {};
 
   // Like PostgreSQL, stamps carry microseconds.
   save(guid: string, fields: Record<string, unknown>) {
@@ -49,6 +50,7 @@ class FakeServer {
       return Response.json({ responses });
     }
     if (url.pathname === '/api/Event') {
+      this.onPull();
       const since = url.searchParams.get('$filter')!.replace('ModifiedAt ge ', '');
       const value = [...this.rows.values()].filter(r => (r.ModifiedAt as string) >= since);
       return Response.json({ value });
@@ -158,6 +160,31 @@ describe('sync', () => {
     status.lastSyncedAt = now - 60_000;
     expect(syncIsStale(now - 60_000, now)).toBe(false);
     expect(syncIsStale(hourAgo, now)).toBe(true);
+  });
+});
+
+describe('direction', () => {
+  it('says up while pushing changes and down while pulling, then rests', async () => {
+    await db.events.add({ ...sleep(), dirty: 1 });
+    const seen: string[] = [];
+    server.onBatch = async () => void seen.push(status.direction);
+    server.onPull = () => void seen.push(status.direction);
+
+    await syncNow();
+
+    // A new row takes two batches: the PATCH that 404s, then the POST.
+    expect(seen).toEqual(['up', 'up', 'down']);
+    expect(status.direction).toBe('');
+  });
+
+  it('only pulls when nothing is waiting to push', async () => {
+    const seen: string[] = [];
+    server.onBatch = async () => void seen.push(status.direction);
+    server.onPull = () => void seen.push(status.direction);
+
+    await syncNow();
+
+    expect(seen).toEqual(['down']);
   });
 });
 
