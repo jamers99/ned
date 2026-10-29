@@ -43,6 +43,8 @@
   const unpushed = live(oldestUnpushed, null);
   const stale = $derived(syncIsStale(unpushed.value, now));
   const synced = $derived(lastSyncedText(now));
+  // While a sync is moving data, an arrow inside the cloud says which way.
+  const moving = $derived(status.direction === 'up' ? 'Uploading changes' : status.direction === 'down' ? 'Downloading changes' : '');
 
   // One tap starts the sleep at now; the drawer that opens can move its start earlier, like Feed's.
   async function sleepTapped() {
@@ -62,9 +64,10 @@
     </div>
     <div class="header-buttons">
       {#if status.user}
-        <button class="sync" class:stale aria-label={stale ? `Not synced. ${synced}` : synced}
-          onclick={() => open({ kind: 'settings' })}>
-          <Icon name="cloud" size={18} width={stale ? 2 : 1.5} />
+        <button class="sync" class:stale class:moving={moving !== ''}
+          aria-label={moving || (stale ? `Not synced. ${synced}` : synced)} onclick={() => open({ kind: 'settings' })}>
+          <Icon name={status.direction === 'up' ? 'cloudUp' : status.direction === 'down' ? 'cloudDown' : 'cloud'}
+            size={18} width={stale ? 2 : 1.5} />
           {#if stale}<span class="stale-dot"></span>{/if}
         </button>
       {/if}
@@ -199,6 +202,10 @@
     align-items: center;
     justify-content: center;
     opacity: 0.7;
+  }
+
+  .sync.moving {
+    opacity: 1;
   }
 
   .sync.stale {
