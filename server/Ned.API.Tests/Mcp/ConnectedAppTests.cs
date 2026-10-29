@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Ned.API.Families;
 using Ned.API.Tracking;
 
 namespace Ned.API.Tests.Mcp;
@@ -117,8 +116,10 @@ public class ConnectedAppTests(NedApiFactory api)
     [Fact]
     public void FoodGuid_MatchesThePhones()
     {
-        // From client/src/lib/ids.ts. The first family keeps the Guids its phones gave foods before families.
-        Assert.Equal(Guid.Parse("d1b871dc-f87b-579e-9e40-9c66f24fa36f"), FoodGuid.For(FamiliesUpgrade.FirstFamily, " Mango "));
+        // From client/src/lib/ids.ts. The first family (firstFamily there) keeps the Guids its phones gave foods
+        // before families.
+        Assert.Equal(Guid.Parse("d1b871dc-f87b-579e-9e40-9c66f24fa36f"),
+            FoodGuid.For(Guid.Parse("3f6b2c1e-8d4a-4f0b-9c7e-1a2b3c4d5e6f"), " Mango "));
         Assert.Equal(Guid.Parse("ea7fee3c-d8c3-5e3b-94e1-6b47a663f80a"),
             FoodGuid.For(Guid.Parse("0b7c4a52-9a3e-4d8f-b1a6-6f2e9c0d4e17"), "Mango"));
     }
