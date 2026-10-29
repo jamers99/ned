@@ -23,9 +23,12 @@ public class ConnectedAppFoodsBL(Event.Logic events, IHttpContextAccessor http)
                 || http.HttpContext?.User.FindFirst(TokenKind)?.Value != ConnectedApp)
                 return;
 
+            if (solids.Family is not { } family)
+                return;
+
             foreach (var name in FoodNames(solids.Foods))
             {
-                var guid = FoodGuid.For(name);
+                var guid = FoodGuid.For(family.Guid, name);
                 var food = args.Context.GetNewEntities<Food>().FirstOrDefault(f => f.Guid == guid)
                     ?? args.GetEntity<Food>(guid)
                     ?? new Food(args.Context) { Guid = guid, Name = name };

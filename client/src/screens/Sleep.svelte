@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baby, capital } from '../lib/baby.ts';
+  import { baby, capital } from '../lib/baby.svelte.ts';
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
@@ -175,7 +175,7 @@
         <div class="group">
           <span class="eyebrow">Fell asleep</span>
           <div class="chips">
-            {#each onsetChoices as [value, text] (value)}
+            {#each onsetChoices() as [value, text] (value)}
               <button class="chip" class:on={sleep.SleepOnset === value}
                 onclick={() => toggle({ SleepOnset: sleep.SleepOnset === value ? null : value })}>{text}</button>
             {/each}
@@ -215,7 +215,7 @@
           </TimeInput>
         </div>
         <div class="chips">
-          {#each settleChoices as [value, text] (value)}
+          {#each settleChoices() as [value, text] (value)}
             <button class="chip" class:on={addBy === value} onclick={() => (addBy = addBy === value ? null : value)}>{text}</button>
           {/each}
         </div>

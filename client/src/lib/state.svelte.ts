@@ -9,6 +9,10 @@ export const status = $state({
   user: '',
   /** Chose to use the app without an account: everything stays on this phone and nothing syncs. */
   guest: false,
+  /** The family's Guid: it is also the Guid of its Settings row, and seeds its foods' Guids. */
+  family: '',
+  /** What the other parent enters when they create their account. Empty until this phone has signed in. */
+  inviteCode: '',
   /** True when the refresh token stopped working. The app keeps working; it just can't sync. */
   needsSignIn: false,
   syncing: false,

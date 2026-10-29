@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baby, capital } from '../lib/baby.ts';
+  import { baby, capital, verb } from '../lib/baby.svelte.ts';
   import Sheet from '../components/Sheet.svelte';
   import { close, open } from '../lib/nav.svelte.ts';
   import { nextSleep, type SleepTargets } from '../lib/sleep.ts';
@@ -25,14 +25,14 @@
     <p>
       <span class="swatch awake-swatch"></span>
       <span>
-        <strong>The bar fills</strong> with the time {baby.theyre} been awake{next ? `, since ${baby.they} woke at ${clockTime(next.awakeSince)}` : ''}.
+        <strong>The bar fills</strong> with the time {baby.theyve} been awake{next ? `, since ${baby.they} woke at ${clockTime(next.awakeSince)}` : ''}.
       </span>
     </p>
     <p>
       <span class="swatch target-swatch"></span>
       <span>
         {#if next?.kind === 'bedtime'}
-          <strong>The mark at the end is bedtime</strong>, {clockTime(next.from)}. After the day's naps, {baby.they} stays up until then.
+          <strong>The mark at the end is bedtime</strong>, {clockTime(next.from)}. After the day's naps, {baby.they} {verb('stays', 'stay')} up until then.
         {:else}
           <strong>The shaded zone</strong> is a good time for the next nap: about
           {duration(targets.NapWakeWindowMinutes * minute)} after waking, give or take 10 minutes{next ? ` (${clockShort(next.from)}–${clockTime(next.to)})` : ''}.

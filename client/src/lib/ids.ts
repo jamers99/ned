@@ -1,12 +1,17 @@
 // Shared with tools/nara-import, so both produce the same Guid for the same food.
 
-export const settingsGuid = '5e771465-0000-4000-8000-000000000001';
+/**
+ * Before anyone could sign up, Ned had one family. Its Guid is the namespace its phones derived food Guids from,
+ * so they stay the same. A phone that hasn't signed in yet keys its rows to it too, until it learns its family.
+ */
+export const firstFamily = '3f6b2c1e-8d4a-4f0b-9c7e-1a2b3c4d5e6f';
 
-const foodNamespace = '3f6b2c1e-8d4a-4f0b-9c7e-1a2b3c4d5e6f';
+/** The one Settings row every phone used before families. A family's Settings row has the family's Guid. */
+export const oldSettingsGuid = '5e771465-0000-4000-8000-000000000001';
 
-/** Both phones derive the same Guid for "Mango" and "mango", so offline adds upsert one row. */
-export function foodGuid(name: string): Promise<string> {
-  return uuidV5(name.trim().toLowerCase(), foodNamespace);
+/** A family's phones derive the same Guid for "Mango" and "mango", so offline adds upsert one row. */
+export function foodGuid(name: string, family: string): Promise<string> {
+  return uuidV5(name.trim().toLowerCase(), family);
 }
 
 /** A name-based (SHA-1) UUID, so the same name in the same namespace always gives the same Guid. */

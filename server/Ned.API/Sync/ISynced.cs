@@ -1,7 +1,9 @@
+using Ned.API.Families;
+
 namespace Ned.API.Sync;
 
 /// <summary>
-/// A record that both phones keep a copy of. Phones generate the <c>Guid</c>, write locally first, and push
+/// A record that every phone in a family keeps a copy of. Phones generate the <c>Guid</c>, write locally first, and push
 /// upserts later; the server is a store that stamps <see cref="ModifiedAt"/> so phones can pull changes.
 /// </summary>
 public partial interface ISynced
@@ -25,4 +27,10 @@ public partial interface ISynced
     /// </summary>
     [Property<DataTypes.Text>("Logged by")]
     string LoggedBy { get; set; }
+
+    /// <summary>
+    /// Whose record this is. The server stamps it from the signed-in parent; phones never send it.
+    /// </summary>
+    [ReferenceProperty("Family", DeleteAction.Restrict)]
+    Family? Family { get; set; }
 }

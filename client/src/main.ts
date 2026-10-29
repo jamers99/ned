@@ -4,6 +4,7 @@ import './app.css';
 import App from './App.svelte';
 import { loadUser } from './lib/auth.ts';
 import { watchForProblems } from './lib/diagnostics.svelte.ts';
+import { loadFamily } from './lib/family.ts';
 import { listenForBack } from './lib/nav.svelte.ts';
 import { startClock } from './lib/state.svelte.ts';
 import { abandonSync, syncNow } from './lib/sync.ts';
@@ -25,6 +26,7 @@ listenForBack();
 // Ask the browser to keep the log and the sign-in even when the phone runs low on storage.
 void navigator.storage?.persist?.().catch(() => {});
 await loadUser();
+await loadFamily();
 mount(App, { target: document.getElementById('app')! });
 
 // Push and pull on open, whenever the app comes back to the front, when the network returns, and every minute

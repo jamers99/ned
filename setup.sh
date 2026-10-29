@@ -25,14 +25,7 @@ settings=(
   "OAuth__Secret=$(openssl rand -hex 32)"
   "OAuth__PublicOrigin=https://$app.azurewebsites.net"
 )
-read -rp 'Parent names, separated by spaces: ' -a parents
-for parent in "${parents[@]}"; do
-  password=
-  until [[ ${#password} -ge 8 && $password =~ [A-Z] && $password =~ [a-z] && $password =~ [0-9] && $password =~ [^A-Za-z0-9] ]]; do
-    read -rsp "Password for $parent (8+ characters with upper, lower, digit and symbol): " password && echo
-  done
-  settings+=("Parents__$parent=$password")
-done
+# Parents make their own accounts in the app (Create account), so there are no passwords to set here.
 az webapp config appsettings set "${group[@]}" --name $app --settings "${settings[@]}"
 
 # GitHub Actions deploys main as this identity, signing in with OIDC, so no Azure secret is stored in GitHub.

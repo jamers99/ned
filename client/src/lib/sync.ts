@@ -1,5 +1,6 @@
 import { db, getMeta, setMeta, syncedTable, syncedTables, type Synced, type SyncedTable } from './db.ts';
 import { apiFetch, errorText, messageFrom, SignInRequired } from './auth.ts';
+import { adoptFamily, knowsFamily } from './family.ts';
 import { status } from './state.svelte.ts';
 import { clock, mediumDate, startOfDay } from './time.ts';
 import { entitySets, fields, fromServer, parseInstant, toServer } from './wire.ts';
@@ -53,6 +54,8 @@ async function pushThenPull() {
   const timeout = setTimeout(() => run.abort(), syncTimeout);
   status.syncing = true;
   try {
+    // Rows are keyed to the family, so the phone learns it before pushing anything.
+    if (!(await knowsFamily())) await adoptFamily(run.signal);
     const pushError = await push(run.signal);
     await pull(run.signal);
     if (pushError) throw new Error(pushError);

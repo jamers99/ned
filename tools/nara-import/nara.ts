@@ -1,6 +1,6 @@
 // Maps a Nara Baby CSV export to Ned rows. Pure functions, so they can be tested without a server.
 import type { BabyEvent, Food, Growth, SolidAmount } from '../../client/src/lib/db.ts';
-import { foodGuid, uuidV5 } from '../../client/src/lib/ids.ts';
+import { firstFamily, foodGuid, uuidV5 } from '../../client/src/lib/ids.ts';
 import { presetCategory } from '../../client/src/lib/foods.ts';
 import { defaultTargets, isNightTime } from '../../client/src/lib/sleep.ts';
 
@@ -87,7 +87,7 @@ const kgPerLb = 0.45359237;
 const cmPerIn = 2.54;
 const ozPerMl = 1 / 29.5735;
 
-export async function mapRows(rows: CsvRow[]): Promise<Imported> {
+export async function mapRows(rows: CsvRow[], family = firstFamily): Promise<Imported> {
   const missing = Object.values(columns).filter(name => rows.length && !(name in rows[0]));
   if (missing.length) throw new Error(`The CSV has no ${missing.join(', ')} column.`);
   const get = (row: CsvRow, key: keyof typeof columns) => row[columns[key]] ?? '';
@@ -153,7 +153,7 @@ export async function mapRows(rows: CsvRow[]): Promise<Imported> {
 
   for (const use of foodUse.values()) {
     result.foods.push({
-      Guid: await foodGuid(use.name), Name: use.name, Category: presetCategory(use.name), LastUsedAt: use.last,
+      Guid: await foodGuid(use.name, family), Name: use.name, Category: presetCategory(use.name), LastUsedAt: use.last,
       UseCount: use.count, LoggedBy: 'Nara', Deleted: false
     });
   }
