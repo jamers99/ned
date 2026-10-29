@@ -1,6 +1,8 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
+  import InstallSteps from '../components/InstallSteps.svelte';
   import { signIn, signUp, skipSignIn } from '../lib/auth.ts';
+  import { installed } from '../lib/install.svelte.ts';
   import { close, nav } from '../lib/nav.svelte.ts';
   import { syncNow } from '../lib/sync.ts';
 
@@ -35,6 +37,8 @@
       <p>An account shares one log across both parents' phones. Ned saves to this phone first, so it works
         offline and syncs when it can.</p>
     </div>
+
+    {#if !installed()}<InstallSteps />{/if}
 
     <div class="modes" role="tablist">
       <button type="button" role="tab" aria-selected={!creating} class:on={!creating}
