@@ -9,12 +9,10 @@ Anyone can make an account. The first parent's account starts a family; the othe
 You need the .NET 10 SDK, Node 24+ and PostgreSQL on `localhost` (user `postgres`, password `postgres`).
 
 ```bash
-cd client && npm install && npm run build
-```
-
-```bash
 cd server && dotnet run --project Ned.API --launch-profile http
 ```
+
+Building the server builds the client into `server/Ned.API/wwwroot` first (and installs its packages if needed), skipping it when nothing in `client/` changed. Pass `-p:SkipClientBuild=true` to leave `wwwroot` alone.
 
 Open http://localhost:5205 and sign in as `John` / `Dev-john-1` or `Jane` / `Dev-jane-1` (one family, from `Parents` in `appsettings.Development.json`), or choose **Create account**. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
 
