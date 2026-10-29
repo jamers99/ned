@@ -7,31 +7,20 @@
 
 <!-- How to put Ned on this phone's home screen, shown until it's opened from there. -->
 <section class="install">
+  <h2>Ned works best as an app</h2>
   {#if on === 'iphone'}
-    <h2 class="serif">Add Ned to your Home Screen first</h2>
-    <p>On iPhone the Home Screen app keeps its own sign-in, separate from Safari, so start there.</p>
-    <ol>
-      <li>Tap <span class="key"><Icon name="share" size={18} /> Share</span> in Safari's toolbar.</li>
-      <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
-      <li>Open Ned from your Home Screen and sign in there.</li>
-    </ol>
+    <p>Tap <span class="key"><Icon name="share" size={15} /> Share</span> in Safari, then
+      <strong>Add to Home Screen</strong>.</p>
   {:else if on === 'android'}
-    <h2 class="serif">Install Ned on this phone</h2>
     {#if install.done}
-      <p>Installed. Open Ned from your home screen and sign in there.</p>
+      <p>Installed. Open Ned from your home screen.</p>
     {:else if install.prompt}
-      <p>It opens like an app, full screen and offline.</p>
-      <button class="primary-dark" onclick={installNow}>Install Ned</button>
+      <button class="chip" onclick={installNow}>Install Ned</button>
     {:else}
-      <ol>
-        <li>Tap <span class="key">⋮</span> at the top right of Chrome.</li>
-        <li>Choose <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li>
-        <li>Open Ned from your home screen and sign in there.</li>
-      </ol>
+      <p>Tap <span class="key">⋮</span> in Chrome, then <strong>Add to Home screen</strong>.</p>
     {/if}
   {:else}
-    <h2 class="serif">Made for your phone</h2>
-    <p>Open this page on your phone to add Ned to its home screen.</p>
+    <p>Open this page on your phone to add it to the home screen.</p>
   {/if}
 </section>
 
@@ -39,43 +28,35 @@
   .install {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 18px;
-    border-radius: 24px;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 16px;
+    border-radius: 20px;
     border: 1px solid var(--line);
     background: var(--surface);
   }
 
   h2 {
     margin: 0;
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 800;
   }
 
   p {
     margin: 0;
     color: var(--muted);
-    font-size: 15px;
-    line-height: 1.4;
-  }
-
-  ol {
-    margin: 0;
-    padding-left: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-size: 15px;
-    line-height: 1.4;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   .key {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 0 8px;
-    border-radius: 10px;
+    gap: 3px;
+    padding: 0 7px;
+    border-radius: 8px;
     background: var(--ground);
+    color: var(--ink);
     font-weight: 800;
     vertical-align: bottom;
   }
