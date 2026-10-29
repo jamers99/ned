@@ -102,6 +102,36 @@ describe('day timeline', () => {
     expect(friday[0]).toMatchObject({ kind: 'sleep', label: 'Night', event: nextNight });
   });
 
+  it('shows tonight on today while it runs, with what happened in it, and on its morning once it ends', () => {
+    const tonight = event({ Type: 'Sleep', IsNight: true, Start: at(8, '19:05') });
+    const wake = event({ Type: 'NightWaking', Start: at(8, '22:00'), End: at(8, '22:15'), SettledBy: 'Feeding' });
+    const feed = event({ Type: 'Feed', FeedKind: 'Bottle', Start: at(8, '22:02'), End: at(8, '22:10'), BottleOz: 3 });
+    const events = [night, nap1, nap2, tonight, wake, feed];
+
+    // Thursday at 11 PM: tonight is the last thing on Thursday, after one wake window into it.
+    const thursday = dayTimeline(events, at(8, '00:00'), at(8, '23:00')).rows;
+    expect(thursday.slice(-2).map(r => (r.kind === 'event' ? r.event.Type : r.label)))
+      .toEqual(['Awake 5h 30m until bedtime', 'Night']);
+    expect(thursday.at(-1)).toMatchObject({ kind: 'sleep', event: tonight, during: [wake, feed] });
+    // It counts toward its morning, not today, and so do the feeds in it.
+    const { rows: _, ...totals } = dayTimeline(events, at(8, '00:00'), at(8, '23:00'));
+    const { rows: __, ...withoutTonight } = dayTimeline([night, nap1, nap2], at(8, '00:00'), at(8, '23:00'));
+    expect(totals).toEqual(withoutTonight);
+
+    // After midnight it's Friday's night, still running.
+    expect(dayTimeline(events, at(8, '00:00'), at(9, '01:00')).rows.map(r => r.kind === 'sleep' && r.event))
+      .not.toContain(tonight);
+    const friday = dayTimeline(events, at(9, '00:00'), at(9, '01:00'));
+    expect(friday.rows[0]).toMatchObject({ kind: 'sleep', event: tonight, during: [wake, feed] });
+    expect(friday).toMatchObject({ feedCount: 1, sleepTotal: at(9, '01:00') - at(8, '19:05') - 15 * 60_000 });
+
+    // Once it ends, it stays on its morning.
+    const ended = { ...tonight, End: at(9, '06:30') };
+    const morning = [night, nap1, nap2, ended, wake, feed];
+    expect(dayTimeline(morning, at(8, '00:00'), at(9, '12:00')).rows.at(-1)).toMatchObject({ label: 'Awake 5h 30m until bedtime' });
+    expect(dayTimeline(morning, at(9, '00:00'), at(9, '12:00')).rows[0]).toMatchObject({ event: ended });
+  });
+
   it('groups what happened during a night inside it, in time order, and still counts the feeds', () => {
     // A feed started a minute before the waking it belongs to, then solids after the night.
     const feed = event({ Type: 'Feed', FeedKind: 'Nursing', Start: at(8, '06:05'), End: at(8, '06:14'), LeftSeconds: 240, RightSeconds: 240 });

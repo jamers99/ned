@@ -185,9 +185,16 @@ export interface DayTimeline {
  */
 export function dayTimeline(events: BabyEvent[], dayStart: number, now: number): DayTimeline {
   const nights = events.filter(e => isSleep(e) && e.IsNight);
-  const dayFor = (e: BabyEvent) => {
-    const night = e.Type === 'Sleep' ? undefined : nights.find(n => e.Start >= n.Start && e.Start < (n.End ?? now));
-    return dayOf(night ?? e);
+  const nightAround = (e: BabyEvent) =>
+    e.Type === 'Sleep' ? undefined : nights.find(n => e.Start >= n.Start && e.Start < (n.End ?? now));
+  // Tonight shows on today while it runs, even before midnight, so it's on the page Day opens to. It still
+  // counts toward its morning, so it (and what happened in it) stays out of today's totals until then.
+  const shownOn = (e: BabyEvent) =>
+    e.Type === 'Sleep' && e.IsNight && e.End == null ? Math.min(dayOf(e), startOfDay(now)) : dayOf(e);
+  const dayFor = (e: BabyEvent) => shownOn(nightAround(e) ?? e);
+  const early = (e: BabyEvent) => {
+    const night = e.Type === 'Sleep' ? e : nightAround(e);
+    return night != null && shownOn(night) !== dayOf(night);
   };
   const own = events.filter(e => !e.Deleted && dayFor(e) === dayStart).sort(byStart);
   const timeline: DayTimeline = { rows: [], sleepTotal: 0, napCount: 0, napTotal: 0, feedCount: 0, nursingTotal: 0 };
@@ -209,7 +216,7 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
 
       const wakings = event.IsNight ? wakingsDuring(event, events) : [];
       const asleep = timeAsleep(event, wakings, now);
-      timeline.sleepTotal += asleep;
+      if (!early(event)) timeline.sleepTotal += asleep;
       if (!event.IsNight) {
         timeline.napCount++;
         timeline.napTotal += asleep;
@@ -224,7 +231,7 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
       continue;
     }
 
-    if (event.Type === 'Feed') {
+    if (event.Type === 'Feed' && !early(event)) {
       timeline.feedCount++;
       timeline.nursingTotal += (event.LeftSeconds + event.RightSeconds) * 1000;
     }
@@ -237,7 +244,7 @@ export function dayTimeline(events: BabyEvent[], dayStart: number, now: number):
   }
 
   // Tonight's sleep belongs to tomorrow, but the wake window leading into it belongs to today.
-  const bedtime = events.find(e => isSleep(e) && e.IsNight && dayOf(e) === addDays(dayStart, 1));
+  const bedtime = events.find(e => isSleep(e) && e.IsNight && shownOn(e) === addDays(dayStart, 1));
   if (previousSleepEnd != null && bedtime && bedtime.Start > previousSleepEnd)
     timeline.rows.splice(windowSlot, 0, { kind: 'window', label: `Awake ${duration(bedtime.Start - previousSleepEnd)} until bedtime` });
 

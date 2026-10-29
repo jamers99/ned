@@ -8,7 +8,7 @@
   import { close, nav } from '../lib/nav.svelte.ts';
   import { dayOf } from '../lib/sleep.ts';
   import { live } from '../lib/state.svelte.ts';
-  import { clock as clockTime, day, duration, endAfter, mediumDate } from '../lib/time.ts';
+  import { clock as clockTime, day, duration, endAfter, mediumDate, startOfDay } from '../lib/time.ts';
 
   let { guid }: { guid: string } = $props();
 
@@ -46,8 +46,8 @@
   function setDate(start: number) {
     if (!e) return;
     moveTo(start);
-    // The Day tab behind the sheet follows it, so it doesn't seem to vanish.
-    nav.day = dayOf({ ...e, Start: start });
+    // The Day tab behind the sheet follows it, so it doesn't seem to vanish. Tonight, still running, is on today.
+    nav.day = Math.min(dayOf({ ...e, Start: start }), startOfDay(Date.now()));
   }
 
   function setEnd(end: number) {
