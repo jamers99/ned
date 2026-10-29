@@ -4,7 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-(cd client && npm ci && npm run build)
+# Publishing builds the client into wwwroot first (see Ned.API.csproj).
+(cd client && npm ci)
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 dotnet publish server/Ned.API --configuration Release --output "$out/app"

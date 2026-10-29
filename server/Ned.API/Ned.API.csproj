@@ -35,4 +35,29 @@
     <Using Include="Benevia.Core.Events" />
     <Using Include="System.ComponentModel.DataAnnotations" />
   </ItemGroup>
+
+  <!-- The server serves the PWA from wwwroot, so build it first. Skips when the client hasn't changed;
+       pass -p:SkipClientBuild=true to leave wwwroot alone. -->
+  <PropertyGroup>
+    <ClientDir>$(MSBuildProjectDirectory)/../../client/</ClientDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClientInput Include="$(ClientDir)src/**;$(ClientDir)public/**;$(ClientDir)index.html;$(ClientDir)*.config.*;$(ClientDir)package-lock.json" />
+  </ItemGroup>
+
+  <Target Name="NpmInstall" Condition="'$(SkipClientBuild)' != 'true' And !Exists('$(ClientDir)node_modules')">
+    <Exec Command="npm ci" WorkingDirectory="$(ClientDir)" />
+  </Target>
+
+  <Target Name="BuildClient" BeforeTargets="BeforeBuild" DependsOnTargets="NpmInstall" Condition="'$(SkipClientBuild)' != 'true'"
+          Inputs="@(ClientInput)" Outputs="wwwroot/index.html">
+    <Exec Command="npm run build" WorkingDirectory="$(ClientDir)" />
+    <!-- wwwroot was globbed before the build, so swap the old hashed file names for the new ones. -->
+    <ItemGroup>
+      <_StaleClientFile Include="@(Content)" Condition="$([System.String]::Copy('%(Identity)').StartsWith('wwwroot'))" />
+      <Content Remove="@(_StaleClientFile)" />
+      <Content Include="wwwroot/**" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>
