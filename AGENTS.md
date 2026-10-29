@@ -85,6 +85,7 @@ The phones use Benevia Core's built-in login (access token + refresh token). Thi
 - **Never spend a refresh token without hearing back:** each refresh token works once, so a refresh the phone gives up on after the server answered signs the phone out. The server sleeps when idle (free App Service plan) and can take longer to wake than a phone waits, so each refresh first wakes it with `HEAD /api/$metadata`, which changes nothing; the refresh itself is never aborted by a sync. Only a 401 from the refresh means signing in again (first re-read the stored token, in case another copy of the app refreshed); anything else is retried like any sync error.
 - **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
 - **iPhone note:** a home-screen app has its own storage, separate from Safari. Users must sign in from inside the installed app.
+- **Installing:** while the first screen is open in a browser tab (not from the home screen), it shows how to install on that device (`InstallSteps.svelte`): Safari's Share → Add to Home Screen on iPhone and iPad; Chrome's own install offer as one button on Android, or its menu steps when Chrome hasn't offered.
 - **Sign out:** clear tokens only (and keep the family the local rows are keyed to). Ask before also clearing local data.
 
 ## MCP (AI apps)

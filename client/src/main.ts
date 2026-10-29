@@ -5,6 +5,7 @@ import App from './App.svelte';
 import { loadUser } from './lib/auth.ts';
 import { watchForProblems } from './lib/diagnostics.svelte.ts';
 import { loadFamily } from './lib/family.ts';
+import { listenForInstall } from './lib/install.svelte.ts';
 import { listenForBack } from './lib/nav.svelte.ts';
 import { startClock } from './lib/state.svelte.ts';
 import { abandonSync, syncNow } from './lib/sync.ts';
@@ -20,6 +21,7 @@ registerSW({
   }
 });
 watchForProblems();
+listenForInstall();
 startClock();
 listenForBack();
 
