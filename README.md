@@ -49,8 +49,6 @@ On each phone, open the site, choose **Add to Home Screen**, and sign in or crea
 
 Sign-ups are limited to 10 an hour from one address (`SignUp__PerHour`), since an invite code is all that guards a family's log. There is no password reset yet.
 
-The parents who used Ned before sign-up became the first family when the server upgraded: their records, foods and settings are theirs, and Settings shows their invite code.
-
 ## Connect Claude
 
 Claude can read Ned's data and log entries over MCP. In the Claude app, open **Settings → Connectors → Add custom connector** and enter `https://ned-baby.azurewebsites.net/mcp`. Claude opens a Ned page: sign in with your Ned account and choose **Allow**. Claude sees only your family's log. Uncheck **Also let it log and edit entries** for read-only access.

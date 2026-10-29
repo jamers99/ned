@@ -65,7 +65,7 @@ export interface Settings extends Synced {
   /** The night, as minutes after midnight: 8 PM – 6 AM by default. Bedtime aims for its start. */
   NightStartMinutes: number;
   NightEndMinutes: number;
-  /** Empty until a parent fills it in. Missing on rows saved before the name was a setting. */
+  /** Missing until a parent sets them; the app then says "Baby" and they. */
   BabyName?: string;
   BabyPronouns?: Pronouns;
 }
