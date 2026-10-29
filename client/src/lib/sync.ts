@@ -55,7 +55,10 @@ async function pushThenPull() {
   status.syncing = true;
   try {
     // Rows are keyed to the family, so the phone learns it before pushing anything.
-    if (!(await knowsFamily())) await adoptFamily(run.signal);
+    if (!(await knowsFamily())) {
+      status.direction = 'down';
+      await adoptFamily(run.signal);
+    }
     const pushError = await push(run.signal);
     await pull(run.signal);
     if (pushError) throw new Error(pushError);
@@ -76,6 +79,7 @@ async function pushThenPull() {
   } finally {
     clearTimeout(timeout);
     status.syncing = false;
+    status.direction = '';
   }
 }
 
@@ -118,6 +122,7 @@ export async function push(signal: AbortSignal): Promise<string> {
   for (;;) {
     const pending = await dirtyRows();
     if (pending.length === 0) return '';
+    status.direction = 'up';
 
     const patches = await sendBatch(pending, 'PATCH', signal);
     const missing = pending.filter((_, i) => patches[i].status === 404);
@@ -182,6 +187,7 @@ async function markPushed(table: SyncedTable, pushed: Synced) {
 
 /** Pulls rows changed since each table's cursor, deleted rows included. Local unpushed edits win. */
 export async function pull(signal: AbortSignal) {
+  status.direction = 'down';
   for (const table of syncedTables) {
     const cursor = (await getMeta<number>(`cursor:${table}`)) ?? 0;
     const since = new Date(Math.max(0, cursor - pullOverlap)).toISOString();

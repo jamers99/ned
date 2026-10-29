@@ -16,6 +16,8 @@ export const status = $state({
   /** True when the refresh token stopped working. The app keeps working; it just can't sync. */
   needsSignIn: false,
   syncing: false,
+  /** Which way a sync is moving data right now: 'up' while pushing changes, 'down' while pulling them. */
+  direction: '' as '' | 'up' | 'down',
   lastSyncedAt: 0,
   error: ''
 });
