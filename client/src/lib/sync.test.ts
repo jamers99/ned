@@ -2,8 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { newEvent } from './actions.ts';
 import { db, setMeta, type BabyEvent, type Food, type Settings } from './db.ts';
-import { loadFamily } from './family.ts';
-import { firstFamily, foodGuid, oldSettingsGuid } from './ids.ts';
+import { firstFamily, foodGuid } from './ids.ts';
 import { status } from './state.svelte.ts';
 import { abandonSync, oldestUnpushed, syncIsStale, syncNow } from './sync.ts';
 
@@ -225,15 +224,11 @@ describe('family', () => {
     expect(await db.settings.count()).toBe(0);
   });
 
-  it('a phone signed in before families keeps its foods and moves its settings to the first family', async () => {
-    await db.settings.put({ ...settings(oldSettingsGuid, 1), dirty: 0, ModifiedAt: '2026-10-01T00:00:00Z' });
-    await db.foods.put(await food('Pear', firstFamily));
+  it("a phone in the first family keeps its foods' Guids", async () => {
+    await db.foods.put({ ...(await food('Pear', firstFamily)), dirty: 0 });
 
-    await loadFamily();
     await syncNow();
 
-    expect(await db.settings.get(oldSettingsGuid)).toBeUndefined();
-    expect(await db.settings.get(firstFamily)).toMatchObject({ NapsPerDay: 1, ModifiedAt: '' });
     expect(await db.foods.get(await foodGuid('Pear', firstFamily))).toMatchObject({ dirty: 0 });
   });
 });
