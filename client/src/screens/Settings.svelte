@@ -1,10 +1,10 @@
 <script lang="ts">
   import Overlay from '../components/Overlay.svelte';
-  import { baby, capital } from '../lib/baby.ts';
+  import { baby, capital, verb } from '../lib/baby.svelte.ts';
   import { updateSettings } from '../lib/actions.ts';
   import { signOut } from '../lib/auth.ts';
-  import { db, getMeta, syncedTables, type Settings } from '../lib/db.ts';
-  import { settingsGuid } from '../lib/ids.ts';
+  import { db, getMeta, syncedTables, type Pronouns, type Settings } from '../lib/db.ts';
+  import { settingsGuid } from '../lib/family.ts';
   import { diagnostics } from '../lib/diagnostics.svelte.ts';
   import { exportData } from '../lib/export.ts';
   import { close, open } from '../lib/nav.svelte.ts';
@@ -13,7 +13,7 @@
   import { lastSyncedText, syncNow } from '../lib/sync.ts';
   import { atMinuteOfDay, clock as clockTime, duration, minute } from '../lib/time.ts';
 
-  const row = live(() => db.settings.get(settingsGuid), undefined as Settings | undefined);
+  const row = live(guid => db.settings.get(guid), undefined as Settings | undefined, settingsGuid);
   const targets = $derived(targetsFrom(row.value));
 
   // The debug panel: what is waiting to push and how far each table has pulled.
@@ -28,17 +28,17 @@
   const time = (v: number) => clockTime(atMinuteOfDay(0, v));
   const length = (v: number) => duration(v * minute);
 
-  const rows: { key: Target; label: string; help?: string; step: number; show: (v: number) => string }[] = [
+  const rows: { key: Target; label: string; help?: string; step: number; show: (v: number) => string }[] = $derived([
     { key: 'NapsPerDay', label: 'Naps a day', step: 1, show: String },
     { key: 'NapWakeWindowMinutes', label: 'Awake before a nap', step: 5, show: length,
       help: `How long ${baby.they} can stay up before a nap.` },
     { key: 'BedtimeWakeWindowMinutes', label: 'Awake before bed', step: 5, show: length,
       help: `How long ${baby.they} can stay up after ${baby.their} last nap before bed.` },
     { key: 'NightStartMinutes', label: 'Bedtime', step: 15, show: time,
-      help: `When ${baby.they} usually goes down for the night.` },
+      help: `When ${baby.they} usually ${verb('goes', 'go')} down for the night.` },
     { key: 'NightEndMinutes', label: 'Morning', step: 15, show: time,
-      help: `When ${baby.they} usually starts the day.` }
-  ];
+      help: `When ${baby.they} usually ${verb('starts', 'start')} the day.` }
+  ]);
 
   const isTime = (key: Target) => key === 'NightStartMinutes' || key === 'NightEndMinutes';
 
@@ -46,6 +46,13 @@
     const value = targets[key] + by;
     const day = 24 * 60;
     void updateSettings({ [key]: isTime(key) ? (value + day) % day : Math.max(key === 'NapsPerDay' ? 0 : 5, value) });
+  }
+
+  const pronounChoices: [Pronouns, string][] = [['She', 'She / her'], ['He', 'He / him'], ['They', 'They / them']];
+
+  function rename(event: Event) {
+    const name = (event.currentTarget as HTMLInputElement).value.trim();
+    if (name !== (row.value?.BabyName ?? '')) void updateSettings({ BabyName: name });
   }
 
   async function leave() {
@@ -56,6 +63,21 @@
 </script>
 
 <Overlay title="Settings">
+  <section class="card list">
+    <div class="eyebrow">Your baby</div>
+    <label class="name">
+      <span>Name</span>
+      <input value={row.value?.BabyName ?? ''} placeholder="Baby" autocapitalize="words" autocomplete="off"
+        enterkeyhint="done" onchange={rename} onkeydown={e => e.key === 'Enter' && e.currentTarget.blur()} />
+    </label>
+    <div class="chips" role="group" aria-label="Pronouns">
+      {#each pronounChoices as [value, text] (value)}
+        <button class="chip" class:on={(row.value?.BabyPronouns ?? 'They') === value} aria-pressed={(row.value?.BabyPronouns ?? 'They') === value}
+          onclick={() => updateSettings({ BabyPronouns: value })}>{text}</button>
+      {/each}
+    </div>
+  </section>
+
   <section class="card list">
     <div>
       <div class="eyebrow">{capital(baby.their)} sleep plan</div>
@@ -73,6 +95,16 @@
       </div>
     {/each}
   </section>
+
+  {#if status.user && status.inviteCode}
+    <section class="card list">
+      <div>
+        <div class="eyebrow">Invite your partner</div>
+        <p class="help">On their phone, they choose Create account and enter this code, so you share one log.</p>
+      </div>
+      <div class="code serif">{status.inviteCode}</div>
+    </section>
+  {/if}
 
   <section class="card list">
     <div class="eyebrow">Sync</div>
@@ -170,6 +202,33 @@
     min-width: 84px;
     text-align: center;
     font-size: 18px;
+  }
+
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+  }
+
+  .name input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink);
+    font-size: 17px;
+    outline: 0;
+  }
+
+  .code {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    user-select: all;
   }
 
   .status {

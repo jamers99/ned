@@ -1,7 +1,8 @@
 <script lang="ts">
   import TabBar from './components/TabBar.svelte';
+  import { useBaby } from './lib/baby.svelte.ts';
   import { db, type BabyEvent, type Settings as SettingsRow } from './lib/db.ts';
-  import { settingsGuid } from './lib/ids.ts';
+  import { settingsGuid } from './lib/family.ts';
   import { nav, open } from './lib/nav.svelte.ts';
   import { isNightTime, latestRunning, targetsFrom } from './lib/sleep.ts';
   import { clock, live, status } from './lib/state.svelte.ts';
@@ -23,9 +24,10 @@
   // The last two weeks drive Now, the wake-window math and typical nap lengths.
   const recent = live(() => db.events.where('Start').above(Date.now() - 14 * day).toArray(),
     null as BabyEvent[] | null);
-  const settingsRow = live(() => db.settings.get(settingsGuid), undefined as SettingsRow | undefined);
+  const settingsRow = live(guid => db.settings.get(guid), undefined as SettingsRow | undefined, settingsGuid);
 
   const events = $derived((recent.value ?? []).filter(e => !e.Deleted));
+  $effect(() => useBaby(settingsRow.value));
   const targets = $derived(targetsFrom(settingsRow.value));
   const sleeping = $derived(latestRunning(events, 'Sleep'));
   const overlay = $derived(nav.overlay);

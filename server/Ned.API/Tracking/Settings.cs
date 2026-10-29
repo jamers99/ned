@@ -4,7 +4,7 @@ using Ned.API.Sync;
 namespace Ned.API.Tracking;
 
 /// <summary>
-/// Sleep targets shared by both phones. There is one row, with a fixed <c>Guid</c> that both phones use.
+/// Sleep targets shared by a family's phones. There is one row per family, and its <c>Guid</c> is the family's.
 /// </summary>
 [ApiEntity]
 public partial class Settings : ISynced
@@ -28,4 +28,18 @@ public partial class Settings : ISynced
     [Property<DataTypes.Integer>("Night ends (minutes after midnight)")]
     [DefaultValue(6 * 60)]
     public partial int NightEndMinutes { get; set; }
+
+    [Property<DataTypes.Text>("Baby's name", Description = "Empty until a parent fills it in; the app then says \"Baby\".")]
+    public partial string BabyName { get; set; }
+
+    [Property<DataTypes.Enum>("Baby's pronouns")]
+    [DefaultValue(Pronouns.They)]
+    public partial Pronouns BabyPronouns { get; set; }
+}
+
+public enum Pronouns
+{
+    She,
+    He,
+    They
 }

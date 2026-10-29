@@ -114,10 +114,10 @@
         v => v && set({ IsNight: v === 'night' }))}
       {@render choices('Where', Object.entries(locationText), e.SleepLocation,
         v => set({ SleepLocation: v as SleepLocation | null }))}
-      {@render choices('Fell asleep', onsetChoices, e.SleepOnset, v => set({ SleepOnset: v as SleepOnset | null }))}
+      {@render choices('Fell asleep', onsetChoices(), e.SleepOnset, v => set({ SleepOnset: v as SleepOnset | null }))}
       {@render choices('Woke up', moods.map(m => [m, m]), e.WakeMood, v => set({ WakeMood: v as WakeMood | null }))}
     {:else if e.Type === 'NightWaking'}
-      {@render choices('Back to sleep by', settleChoices, e.SettledBy, v => set({ SettledBy: v as SettledBy | null }))}
+      {@render choices('Back to sleep by', settleChoices(), e.SettledBy, v => set({ SettledBy: v as SettledBy | null }))}
     {:else if e.Type === 'Feed' && e.FeedKind === 'Bottle'}
       {@render stepper('Amount', `${e.BottleOz ?? 0} oz`, d => set({ BottleOz: Math.max(0, (e.BottleOz ?? 0) + d / 2) }))}
     {:else if e.Type === 'Feed'}

@@ -1,6 +1,6 @@
 import { test as base, expect, type Page } from '@playwright/test';
-import type { BabyEvent, Food, Growth } from '../src/lib/db.ts';
-import { foodGuid } from '../src/lib/ids.ts';
+import type { BabyEvent, Food, Growth, Settings } from '../src/lib/db.ts';
+import { firstFamily, foodGuid } from '../src/lib/ids.ts';
 
 /** A local time in October 2026 (the config sets the time zone). */
 export const at = (day: number, time: string) => {
@@ -53,13 +53,18 @@ async function foods(): Promise<Food[]> {
   const used: [string, Food['Category'], number][] =
     [['Avocado', 'Fruit', at(17, '12:00')], ['Banana', 'Fruit', at(18, '08:30')], ['Oatmeal', 'Grains', at(18, '08:30')]];
   return Promise.all(used.map(async ([Name, Category, LastUsedAt]) =>
-    ({ ...synced, Guid: await foodGuid(Name), Name, Category, LastUsedAt, UseCount: 1 })));
+    ({ ...synced, Guid: await foodGuid(Name, firstFamily), Name, Category, LastUsedAt, UseCount: 1 })));
 }
 
 const growth: Growth[] = [
   { ...synced, Guid: crypto.randomUUID(), MeasuredAt: at(1, '00:00') - 45 * 86_400_000, WeightKg: 6.8, LengthCm: 64, HeadCm: 41 },
   { ...synced, Guid: crypto.randomUUID(), MeasuredAt: at(1, '00:00'), WeightKg: 7.4, LengthCm: 66.5, HeadCm: 42 }
 ];
+
+const settings: Settings[] = [{
+  ...synced, Guid: firstFamily, NapsPerDay: 2, NapWakeWindowMinutes: 150, BedtimeWakeWindowMinutes: 210,
+  NightStartMinutes: 20 * 60, NightEndMinutes: 6 * 60, BabyName: 'Kennedy', BabyPronouns: 'She'
+}];
 
 /** Writes rows straight into the app's IndexedDB, then reloads so the app reads them. */
 async function seed(page: Page, rows: Record<string, unknown[]>) {
@@ -148,7 +153,7 @@ export const test = base.extend<Options & { app: App }>({
     await expect(page.getByText('Try it without an account')).toBeVisible();
     if (seeded)
       await seed(page, {
-        events: history(), foods: await foods(), growth,
+        events: history(), foods: await foods(), growth, settings,
         meta: user
           ? [{ key: 'user', value: user }, { key: 'refreshToken', value: 'spent' }, { key: 'lastSyncedAt', value: startAt - 2 * 3_600_000 }]
           : [{ key: 'guest', value: true }]

@@ -3,7 +3,7 @@ process.env.TZ = 'America/New_York';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import { foodGuid } from '../../client/src/lib/ids.ts';
+import { firstFamily, foodGuid } from '../../client/src/lib/ids.ts';
 import { mapRows, parseCsv } from './nara.ts';
 
 const sample = await readFile(new URL('./fixtures/export_narababy_sample.csv', import.meta.url), 'utf8');
@@ -41,7 +41,7 @@ test('files foods under the phone-compatible Guid, with use counts', async () =>
   const imported = await mapRows(parseCsv(sample));
 
   const cereal = imported.foods.find(f => f.Name === 'Cereal')!;
-  assert.equal(cereal.Guid, await foodGuid('cereal'));
+  assert.equal(cereal.Guid, await foodGuid('cereal', firstFamily));
   assert.equal(cereal.Category, 'Grains');
   assert.equal(cereal.UseCount, 1);
   assert.equal(imported.foods.find(f => f.Name === 'Sweet Potato')!.Category, 'Veggies');

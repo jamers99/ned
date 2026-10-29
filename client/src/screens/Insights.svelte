@@ -56,7 +56,7 @@
       {#if wakings}
         <span class="serif stat-value">{wakings.perNight} / night</span>
         {#if wakings.top}
-          <span class="muted small">{wakings.topShare}% back by {settledText[wakings.top]}</span>
+          <span class="muted small">{wakings.topShare}% back by {settledText(wakings.top)}</span>
         {/if}
       {:else}
         <span class="muted small">Log a night to see this</span>

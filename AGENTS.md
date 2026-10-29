@@ -1,11 +1,11 @@
 # Ned — sleep-first baby tracker
 
-A private, two-parent baby tracker built around one goal: help the baby sleep well. Replaces the Nara Baby app. Two users: one parent on iPhone, who logs most entries, and one on Android.
+A two-parent baby tracker built around one goal: help the baby sleep well. Replaces the Nara Baby app. Anyone can sign up; a **family** is one baby and the parents who share its log (typically one on iPhone, who logs most entries, and one on Android). It started as one family's app, and that family is still the first one.
 
 **Non-negotiables**
 - **Feels native and instant.** Every tap updates the UI in the same frame. Nothing in the UI ever waits on the network.
 - **Offline-first.** The phone's local DB is the source of truth for the UI; the server is for sync and backup.
-- **Name and pronouns are data.** UI text takes the baby's name and pronouns from `client/src/lib/baby.ts` (Kennedy, she/her for now) — never spelled out in a screen — so they can become Settings fields later.
+- **Name and pronouns are data.** UI text takes the baby's name and pronouns from `client/src/lib/baby.svelte.ts`, which reads them from Settings — never spelled out in a screen. They can be she, he or they, so text with a verb after the pronoun goes through `verb('goes', 'go')`. Until a parent fills them in, it's "Baby" and they.
 - **Calm and simple.** Fewer features, done beautifully. When in doubt, leave it out.
 - **One-handed at 3am.** Big targets (≥44px, primary actions ≥96px), minimal typing.
 
@@ -22,7 +22,7 @@ A private, two-parent baby tracker built around one goal: help the baby sleep we
 
 ## Data model (server entities ⇄ Dexie tables, same shape)
 
-All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: the parent's user name; "Nara" for imported rows). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
+All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: the parent's user name; "Nara" for imported rows), `Family` (reference, **stamped by the server** when the row is created; phones never send or read it). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
 
 **Event** — one table for everything time-based
 | Field | Notes |
@@ -48,9 +48,11 @@ Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are
 
 **Growth** — `MeasuredAt`, `WeightKg`, `LengthCm`, `HeadCm` (each nullable). Display lb/oz and inches.
 
-**Food** — `Name` (unique, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`. The `Guid` is a UUIDv5 of the lower-cased name, so both phones adding "Mango" offline upsert the same row.
+**Food** — `Name` (unique per family, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`. The `Guid` is a UUIDv5 of the lower-cased name in the family's Guid as namespace, so both phones adding "Mango" offline upsert the same row.
 
-**Settings** (local + synced single row with a fixed `Guid`) — naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
+**Settings** (local + synced, one row per family whose `Guid` is the family's) — the baby's name (empty) and pronouns (`She` \| `He` \| `They`), naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
+
+**Family** — `InviteCode` ("K7QM-3WXP"), and **Member** (`Guid` = the user's id, `Family`). Not synced to phones: a phone reads its family once (`GET /api/Family`) after signing in. The parents from before sign-up became the first family in a data upgrade (`FamiliesUpgrade`); its Guid is the old food namespace, so its foods kept their Guids, and its Settings row moved from the old fixed Guid to the family's.
 
 **Export** — Settings' **Export data** writes everything on the phone (deleted rows left out) to one CSV for a spreadsheet or another app: one row per event, growth measurement and food, oldest first, each time in local ISO with its offset and in UTC (`client/src/lib/export.ts`). It goes to the share sheet where the phone has one, otherwise downloads.
 
@@ -64,14 +66,17 @@ The client owns an outbox. Server is a dumb, reliable store.
 4. **Deletes are soft:** set `Deleted = true` and push. ⚠️ There is deliberately **no** global query filter on `Deleted`, so the standard OData pull returns deleted rows and deletions reach the other phone. Don't add one; filter on the phone instead.
 5. **Conflicts:** last write (server `ModifiedAt`) wins. Two users, rarely editing the same row — keep it simple.
 6. A running timer is just a row with `End = null`, so the other phone sees it after the next sync.
-7. **Sync indicator:** a quiet cloud in Now's header, just left of Settings (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
+7. **Family first:** rows are keyed to the family, so the first sync after signing in (or after this changed) asks for the family before pushing. A phone that logged as a guest moves its foods to the family's Guids, and its settings too if the family has none yet (joining keeps the family's). Until then a phone keys its rows to the first family's Guid (`client/src/lib/family.ts`).
+8. **Isolation is the server's job:** Core row filters (`ParentsBL`) keep reads to the parent's family, and `FamiliesBL` rejects a save of a row that belongs to another family. Parents can't hard-delete. Core users see everything unless `HasFullAccess = false`, so every account sets it.
+9. **Sync indicator:** a quiet cloud in Now's header, just left of Settings (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
 
 ## Auth
 
 The phones use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is only for AI apps connecting over MCP (below); don't use OAuth in the phones. Read the framework's auth code for the exact endpoints and how it returns tokens.
 
-- **Users:** one Benevia user per parent. Give both one role with full access to Event, Growth, Food and Settings. No other RBAC.
-- **Sign in once per phone:** a first-run screen with username + password, plus **Try it without an account** (a `guest` meta flag: nothing syncs, everything stays on the phone; signing in later from Settings syncs it all). After that, the user should never see a login again unless they sign out or the refresh token is revoked.
+- **Users:** one Benevia user per parent, all with the Parent role (create, read and write Event, Growth, Food and Settings in their own family; read their Family and Members). No other RBAC.
+- **Sign-up:** `POST /api/signup` (`Families/SignUpController.cs`, anonymous, rate-limited per address) makes the user and either a new family or, with an invite code, a membership in that family. The phone then signs in as usual. No email and no password reset yet. Development seeds one family from `Parents` in configuration.
+- **Sign in once per phone:** a first-run screen with **Sign in** / **Create account** (username + password, and an optional invite code), plus **Try it without an account** (a `guest` meta flag: nothing syncs, everything stays on the phone; signing in later from Settings syncs it all). Settings shows the invite code for the other parent. After that, the user should never see a login again unless they sign out or the refresh token is revoked.
 - **Access token:** keep it in memory only, never in localStorage or IndexedDB. It is fine to lose it when the app closes.
 - **Refresh token:**
   - Core's login (`POST /api/auth/signin`, `POST /api/auth/refresh`) returns the refresh token in the JSON body and has no cookie option, so it is stored in IndexedDB, and the server sends a strict Content-Security-Policy with no third-party scripts. The app and API share one origin (the server serves the PWA).
@@ -80,7 +85,7 @@ The phones use Benevia Core's built-in login (access token + refresh token). Thi
 - **Never spend a refresh token without hearing back:** each refresh token works once, so a refresh the phone gives up on after the server answered signs the phone out. The server sleeps when idle (free App Service plan) and can take longer to wake than a phone waits, so each refresh first wakes it with `HEAD /api/$metadata`, which changes nothing; the refresh itself is never aborted by a sync. Only a 401 from the refresh means signing in again (first re-read the stored token, in case another copy of the app refreshed); anything else is retried like any sync error.
 - **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
 - **iPhone note:** a home-screen app has its own storage, separate from Safari. Users must sign in from inside the installed app.
-- **Sign out:** clear tokens only. Ask before also clearing local data.
+- **Sign out:** clear tokens only (and keep the family the local rows are keyed to). Ask before also clearing local data.
 
 ## MCP (AI apps)
 
@@ -88,8 +93,8 @@ An AI app such as Claude connects to `https://<host>/mcp` as a custom connector,
 
 - **On only with a secret:** MCP and OAuth are added when `OAuth:Secret` is set; outside Development `OAuth:PublicOrigin` is required with it, since Azure's proxy hides the https address.
 - **Loopback:** the MCP tools call `/api` over a socket at the address the server listens on. Azure's container has no IPv6 loopback, so `NedMcp` turns a wildcard listen address (`[::]`, `*`, `+`) into `0.0.0.0`, which Core dials as `127.0.0.1`.
-- **Sign-in:** OAuth sends the browser to `/oauth/consent` (`Mcp/consent.html` + `consent.js`, served by the server, not the PWA): sign in as a parent, then Allow. It grants read, and write if left checked, never Core's delete scope: Ned deletes softly so the other phone hears about it. The PWA's service worker must not answer `/connect/` or `/oauth/` navigations.
-- **Keep the phone's logic on the phone.** The UI stays offline-first; the server only fills in what an app can't: `LoggedBy` defaults to the signed-in parent when empty (also for rows logged before signing in), and a Solids event logged by a connected app counts its foods in Food (same UUIDv5 as the phones). Phones count their own foods, so the server leaves their solids alone.
+- **Sign-in:** OAuth sends the browser to `/oauth/consent` (`Mcp/consent.html` + `consent.js`, served by the server, not the PWA): sign in as a parent, then Allow. The app sees only that parent's family. It grants read, and write if left checked, never Core's delete scope: Ned deletes softly so the other phone hears about it. The PWA's service worker must not answer `/connect/` or `/oauth/` navigations.
+- **Keep the phone's logic on the phone.** The UI stays offline-first; the server only fills in what an app can't: `LoggedBy` defaults to the signed-in parent when empty (also for rows logged before signing in), `Family` is stamped on creation (so the staged rows of a connected app pass the row filters), and a Solids event logged by a connected app counts its foods in Food (same UUIDv5 as the phones). Phones count their own foods, so the server leaves their solids alone.
 - **Agent instructions:** `NedMcp.AppInstructions`, appended to Core's rules. Clients cut the whole block at 2,048 bytes, so keep it under ~800 bytes; derived rules an agent must follow (IsNight from the night range, soft deletes) go there.
 
 ## Tests

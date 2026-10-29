@@ -1,13 +1,17 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { newEvent } from './actions.ts';
-import { db, setMeta, type BabyEvent } from './db.ts';
+import { db, setMeta, type BabyEvent, type Food, type Settings } from './db.ts';
+import { loadFamily } from './family.ts';
+import { firstFamily, foodGuid, oldSettingsGuid } from './ids.ts';
 import { status } from './state.svelte.ts';
 import { abandonSync, oldestUnpushed, syncIsStale, syncNow } from './sync.ts';
 
-/** Just enough of the Benevia API: rotating refresh, upserts in $batch, and pulls by ModifiedAt. */
+/** Just enough of the Benevia API: rotating refresh, the family, upserts in $batch, and pulls by ModifiedAt. */
 class FakeServer {
   rows = new Map<string, Record<string, unknown>>();
+  family = firstFamily;
+  familyHasSettings = true;
   clock = Date.UTC(2026, 9, 11, 12);
   onBatch: () => Promise<void> = async () => {};
 
@@ -24,11 +28,15 @@ class FakeServer {
       const payload = btoa(JSON.stringify({ exp: Date.now() / 1000 + 1800 }));
       return Response.json({ accessToken: `x.${payload}.y`, refreshToken: 'next' });
     }
+    if (url.pathname === '/api/Family')
+      return Response.json({ value: [{ Guid: this.family, InviteCode: 'K7QM-3WXP' }] });
+    if (url.pathname.startsWith('/api/Settings('))
+      return this.familyHasSettings ? Response.json({ Guid: this.family }) : new Response('', { status: 404 });
     if (url.pathname === '/api/$batch') {
       await this.onBatch();
       const { requests } = JSON.parse(String(init!.body));
       const responses = requests.map((r: { id: string; method: string; url: string; body: Record<string, unknown> }) => {
-        const patchGuid = r.url.match(/^Event\((.+)\)$/)?.[1];
+        const patchGuid = r.url.match(/^\w+\((.+)\)$/)?.[1];
         if (r.method === 'PATCH' && patchGuid) {
           if (!this.rows.has(patchGuid)) return { id: r.id, status: 404, body: { text: 'Not found' } };
           this.save(patchGuid, r.body);
@@ -56,6 +64,7 @@ beforeEach(async () => {
   await db.open();
   await setMeta('refreshToken', 'first');
   status.user = 'John';
+  status.family = firstFamily;
   status.needsSignIn = false;
   status.error = '';
   server = new FakeServer();
@@ -149,5 +158,55 @@ describe('sync', () => {
     status.lastSyncedAt = now - 60_000;
     expect(syncIsStale(now - 60_000, now)).toBe(false);
     expect(syncIsStale(hourAgo, now)).toBe(true);
+  });
+});
+
+describe('family', () => {
+  const settings = (Guid: string, NapsPerDay: number): Settings => ({
+    Guid, NapsPerDay, NapWakeWindowMinutes: 150, BedtimeWakeWindowMinutes: 210, NightStartMinutes: 1200,
+    NightEndMinutes: 360, ModifiedAt: '', Deleted: false, LoggedBy: '', dirty: 1
+  });
+  const food = async (Name: string, family: string): Promise<Food> => ({
+    Guid: await foodGuid(Name, family), Name, Category: 'Fruit', LastUsedAt: 1, UseCount: 2,
+    ModifiedAt: '', Deleted: false, LoggedBy: '', dirty: 1
+  });
+
+  it('moves what a guest logged to the new family it starts, before pushing', async () => {
+    server.family = '0b7c4a52-9a3e-4d8f-b1a6-6f2e9c0d4e17';
+    server.familyHasSettings = false;
+    await db.settings.put(settings(firstFamily, 3));
+    await db.foods.put(await food('Mango', firstFamily));
+
+    await syncNow();
+
+    expect(status.family).toBe(server.family);
+    expect(status.inviteCode).toBe('K7QM-3WXP');
+    expect(await db.settings.get(server.family)).toMatchObject({ NapsPerDay: 3 });
+    expect(await db.settings.get(firstFamily)).toBeUndefined();
+    const mango = await foodGuid('Mango', server.family);
+    expect(mango).toBe('ea7fee3c-d8c3-5e3b-94e1-6b47a663f80a'); // FoodGuid_MatchesThePhones on the server
+    expect(server.rows.get(mango)).toMatchObject({ Name: 'Mango', UseCount: 2 });
+    expect(server.rows.has(await foodGuid('Mango', firstFamily))).toBe(false);
+  });
+
+  it("joining a family keeps the family's settings over the phone's", async () => {
+    server.family = '0b7c4a52-9a3e-4d8f-b1a6-6f2e9c0d4e17';
+    await db.settings.put(settings(firstFamily, 3));
+
+    await syncNow();
+
+    expect(await db.settings.count()).toBe(0);
+  });
+
+  it('a phone signed in before families keeps its foods and moves its settings to the first family', async () => {
+    await db.settings.put({ ...settings(oldSettingsGuid, 1), dirty: 0, ModifiedAt: '2026-10-01T00:00:00Z' });
+    await db.foods.put(await food('Pear', firstFamily));
+
+    await loadFamily();
+    await syncNow();
+
+    expect(await db.settings.get(oldSettingsGuid)).toBeUndefined();
+    expect(await db.settings.get(firstFamily)).toMatchObject({ NapsPerDay: 1, ModifiedAt: '' });
+    expect(await db.foods.get(await foodGuid('Pear', firstFamily))).toMatchObject({ dirty: 0 });
   });
 });

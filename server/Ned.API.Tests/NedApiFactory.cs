@@ -35,6 +35,8 @@ public class NedApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Tenants:Ned:ConnectionString", ConnectionString);
+        // Every test client shares one address, and the tests sign up plenty of parents.
+        builder.UseSetting("SignUp:PerHour", "1000");
         // The MCP tools call the API over HTTP; in tests there's no socket, so route them into the test server.
         builder.ConfigureTestServices(services =>
             services.AddHttpClient("BeneviaOData").ConfigurePrimaryHttpMessageHandler(() => Server.CreateHandler()));
@@ -55,5 +57,28 @@ public class NedApiFactory : WebApplicationFactory<Program>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", body!["accessToken"]!.GetValue<string>());
         return client;
+    }
+
+    /// <summary>
+    /// Makes an account (starting a family, or joining one with its invite code) and signs in as it.
+    /// </summary>
+    public async Task<HttpClient> SignUpAsync(string userName, string password, string? inviteCode = null)
+    {
+        var response = await CreateClient().PostAsJsonAsync("/api/signup",
+            new { Username = userName, Password = password, InviteCode = inviteCode },
+            TestContext.Current.CancellationToken);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        return await SignInAsync(userName, password);
+    }
+
+    /// <summary>
+    /// The signed-in parent's family, as the phones read it.
+    /// </summary>
+    public static async Task<(Guid Guid, string InviteCode)> FamilyAsync(HttpClient client)
+    {
+        var body = await client.GetFromJsonAsync<JsonObject>("/api/Family?$select=Guid,InviteCode",
+            TestContext.Current.CancellationToken);
+        var family = Assert.Single(body!["value"]!.AsArray())!;
+        return (family["Guid"]!.GetValue<Guid>(), family["InviteCode"]!.GetValue<string>());
     }
 }

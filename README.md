@@ -2,7 +2,7 @@
 
 A calm baby app focusing on sleep and simplicity. An offline-first PWA (`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap is local first; the server is only for sync and backup. See [AGENTS.md](AGENTS.md) for the product spec and the sync design.
 
-Ned is built for one family and one baby, so there's no sign-up: the parents are set in configuration. We'll get to sign up and multi-child support eventually.
+Anyone can make an account. The first parent's account starts a family; the other parent enters the invite code shown in that parent's Settings when they create theirs, and the two share one log. A family has one baby.
 
 ## Run it locally
 
@@ -16,7 +16,7 @@ cd client && npm install && npm run build
 cd server && dotnet run --project Ned.API --launch-profile http
 ```
 
-Open http://localhost:5205 and sign in as `John` / `Dev-john-1` or `Jane` / `Dev-jane-1`. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
+Open http://localhost:5205 and sign in as `John` / `Dev-john-1` or `Jane` / `Dev-jane-1` (one family, from `Parents` in `appsettings.Development.json`), or choose **Create account**. For hot reload, also run `npm run dev` in `client/` and open http://localhost:5173.
 
 ## Tests
 
@@ -43,13 +43,17 @@ cd client && npm run e2e:screens   # a picture of every screen, day and night co
 
 Every push to `main` that passes the tests deploys to Azure App Service through `./deploy.sh`. The database is on [Neon](https://neon.tech).
 
-To set it up the first time, sign in with `az login` and `gh auth login`, then run `./setup.sh`. It creates the Azure resources, asks for the Neon connection string and the parents' passwords, and lets GitHub Actions deploy. Leave the encryption key it generates alone: changing it signs everyone out.
+To set it up the first time, sign in with `az login` and `gh auth login`, then run `./setup.sh`. It creates the Azure resources, asks for the Neon connection string, and lets GitHub Actions deploy. Leave the encryption key it generates alone: changing it signs everyone out.
 
-On each phone, open the site, choose **Add to Home Screen**, and sign in from the installed app. On iPhone, the installed app keeps its own storage, separate from Safari.
+On each phone, open the site, choose **Add to Home Screen**, and sign in or create an account from the installed app. On iPhone, the installed app keeps its own storage, separate from Safari.
+
+Sign-ups are limited to 10 an hour from one address (`SignUp__PerHour`), since an invite code is all that guards a family's log. There is no password reset yet.
+
+The parents who used Ned before sign-up became the first family when the server upgraded: their records, foods and settings are theirs, and Settings shows their invite code.
 
 ## Connect Claude
 
-Claude can read Ned's data and log entries over MCP. In the Claude app, open **Settings → Connectors → Add custom connector** and enter `https://ned-baby.azurewebsites.net/mcp`. Claude opens a Ned page: sign in as one of the parents and choose **Allow**. Uncheck **Also let it log and edit entries** for read-only access.
+Claude can read Ned's data and log entries over MCP. In the Claude app, open **Settings → Connectors → Add custom connector** and enter `https://ned-baby.azurewebsites.net/mcp`. Claude opens a Ned page: sign in with your Ned account and choose **Allow**. Claude sees only your family's log. Uncheck **Also let it log and edit entries** for read-only access.
 
 This needs two app settings, which `./setup.sh` creates. To add them to an app set up before Ned had MCP:
 
@@ -68,7 +72,7 @@ Export the CSV from Nara (Activity → tap the avatar → Export Data) and check
 node tools/nara-import/import.ts export.csv --dry-run
 ```
 
-If a count or sample looks off, Nara may have renamed a column: check the `columns` map in `tools/nara-import/nara.ts`. Then import as one of the parents. Re-running is safe.
+If a count or sample looks off, Nara may have renamed a column: check the `columns` map in `tools/nara-import/nara.ts`. Then import as one of the parents; it goes into that parent's family. Re-running is safe.
 
 ```bash
 read -s NED_PASSWORD && export NED_PASSWORD

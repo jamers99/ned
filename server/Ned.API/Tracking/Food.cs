@@ -4,11 +4,10 @@ using Ned.API.Sync;
 namespace Ned.API.Tracking;
 
 /// <summary>
-/// A food the baby has tried. Phones derive the <c>Guid</c> from the lower-cased name, so both phones adding
-/// "Mango" offline end up upserting the same row.
+/// A food the baby has tried. Phones derive the <c>Guid</c> from the family and the lower-cased name, so both
+/// phones adding "Mango" offline end up upserting the same row. Names are unique per family, not overall.
 /// </summary>
 [ApiEntity]
-[NaturalKey(nameof(Name))]
 public partial class Food : ISynced
 {
     [Required]

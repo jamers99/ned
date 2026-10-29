@@ -5,7 +5,9 @@ using Benevia.Core.DataGenerator;
 using Benevia.Core.Events;
 using Benevia.Core.Postgres;
 using Benevia.Core.Postgres.Model;
+using System.Threading.RateLimiting;
 using Ned.API;
+using Ned.API.Families;
 using Ned.API.Mcp;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +30,14 @@ builder.Services
         // Phones should stay signed in. Each refresh issues a new token with a fresh 90 days.
         jwtOptions: o => o.RefreshTokenExpirationDays = 90);
 var mcp = builder.AddNedMcp();
+// Sign-ups are open to anyone, and an invite code is a family's only lock, so each address gets a few tries an hour.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(SignUpController.RateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? string.Empty,
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("SignUp:PerHour", 10), Window = TimeSpan.FromHours(1) }));
+});
 
 var app = builder.Build();
 app.Services.UseBusinessLogicEvents();
@@ -43,6 +53,7 @@ app.Use(async (context, next) =>
         "base-uri 'self'; frame-ancestors 'none'";
     await next();
 });
+app.UseRateLimiter();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

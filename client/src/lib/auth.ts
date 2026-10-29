@@ -33,7 +33,31 @@ export async function skipSignIn() {
   status.guest = true;
 }
 
-/** Returns an error message, or an empty string when signed in. Signing in never touches local data. */
+/**
+ * Makes an account and signs in as it. Without an invite code the account starts a new family; with the code
+ * the other parent sees in Settings, it joins theirs. Returns an error message, or an empty string.
+ */
+export async function signUp(username: string, password: string, inviteCode: string): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ Username: username.trim(), Password: password, InviteCode: inviteCode.trim() || null }),
+      signal: AbortSignal.timeout(authTimeout)
+    });
+  } catch {
+    return 'No connection. Try again when you are online.';
+  }
+  if (response.status === 429) return 'Too many tries. Wait a while and try again.';
+  if (!response.ok) return (await messageFrom(response)) || 'Could not create the account.';
+  return signIn(username, password);
+}
+
+/**
+ * Returns an error message, or an empty string when signed in. Signing in keeps what's on the phone; the
+ * phone then moves its settings and foods to the family's Guids, before its first push.
+ */
 export async function signIn(username: string, password: string): Promise<string> {
   let response: Response;
   try {
@@ -57,13 +81,19 @@ export async function signIn(username: string, password: string): Promise<string
   return '';
 }
 
-/** Forgets the tokens. Local data stays unless `clearData` is set. */
+/**
+ * Forgets the tokens. Local data stays unless `clearData` is set, and so does the family it is keyed to, which
+ * the next sign-in moves to that account's family.
+ */
 export async function signOut(clearData: boolean) {
   accessToken = '';
   accessExpiresAt = 0;
+  const family = await db.meta.get('family');
   await db.meta.clear();
   if (clearData)
     await Promise.all(syncedTables.map(table => db[table].clear()));
+  else if (family)
+    await db.meta.put(family);
   status.user = '';
   status.guest = false;
   status.needsSignIn = false;

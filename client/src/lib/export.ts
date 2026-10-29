@@ -1,4 +1,4 @@
-import { baby } from './baby.ts';
+import { baby } from './baby.svelte.ts';
 import { db, type BabyEvent, type Food, type Growth } from './db.ts';
 import { toDateInput } from './time.ts';
 

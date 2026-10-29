@@ -1,5 +1,6 @@
 using Benevia.Core.Postgres.Subscribers.Attributes;
 using Benevia.Core.Postgres.Subscribers.EventAgrs;
+using Ned.API.Families;
 
 namespace Ned.API.Tracking;
 
@@ -22,4 +23,16 @@ public class SettingsUpgrade
     [PropertyAdded(nameof(Settings), nameof(Settings.NightEndMinutes))]
     public void EndNightAt6AM(PropertyAddedEventArgs args) =>
         args.UpgradeScript($"""UPDATE "{args.TableName}" SET "{args.ColumnName}" = {6 * 60}, "ModifiedAt" = now();""");
+
+    // The app was written for Kennedy before her name became a setting. The first family's Settings row may still
+    // have its old Guid, since families arrive in the same upgrade.
+    // Both columns arrive together; the scripts run once they exist.
+    [PropertyAdded(nameof(Settings), nameof(Settings.BabyName))]
+    public void NameKennedy(PropertyAddedEventArgs args) =>
+        args.UpgradeScript($"""
+            UPDATE "{args.TableName}"
+            SET "{nameof(Settings.BabyName)}" = 'Kennedy', "{nameof(Settings.BabyPronouns)}" = {(int)Pronouns.She},
+                "ModifiedAt" = now()
+            WHERE "Guid" IN ('{FamiliesUpgrade.FirstFamily}', '{FamiliesUpgrade.OldSettingsGuid}');
+            """);
 }

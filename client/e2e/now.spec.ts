@@ -45,7 +45,8 @@ test.describe('fresh install', () => {
 
   test('can be tried without an account, and shows no sync cloud', async ({ app, page }) => {
     await app.button('Try it without an account').click();
-    await expect(page.getByText('Log a sleep to see her wake window.')).toBeVisible();
+    // A fresh install has no name or pronouns yet.
+    await expect(page.getByText('Log a sleep to see their wake window.')).toBeVisible();
     await expect(page.getByRole('button', { name: /synced/i })).toHaveCount(0);
   });
 });

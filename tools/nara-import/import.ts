@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import type { SyncedTable } from '../../client/src/lib/db.ts';
 import { entitySets, toServer } from '../../client/src/lib/wire.ts';
+import { foodGuid } from '../../client/src/lib/ids.ts';
 import { mapRows, parseCsv } from './nara.ts';
 
 const chunkSize = 200;
@@ -55,6 +56,12 @@ const signIn = await fetch(`${options.server}/api/auth/signin`, {
 });
 if (!signIn.ok) throw new Error(`Sign-in failed: ${await signIn.text()}`);
 const { accessToken } = await signIn.json();
+
+// Foods are keyed to the family, so file them under the signed-in parent's.
+const families = await fetch(`${options.server}/api/Family?$select=Guid`, { headers: { authorization: `Bearer ${accessToken}` } });
+if (!families.ok) throw new Error(`Could not find the family: ${await families.text()}`);
+const [{ Guid: family }] = (await families.json()).value;
+for (const food of imported.foods) food.Guid = await foodGuid(food.Name, family);
 
 const tables: [SyncedTable, object[]][] = [['foods', imported.foods], ['growth', imported.growth], ['events', imported.events]];
 for (const [table, rows] of tables) {

@@ -1,15 +1,19 @@
-import { baby } from './baby.ts';
+import { baby } from './baby.svelte.ts';
 import type { BabyEvent, SettledBy, Side, SleepLocation, SleepOnset, SolidAmount } from './db.ts';
 import { clock, duration } from './time.ts';
 
 export const locationText: Record<SleepLocation, string> = { Crib: 'Crib', Contact: 'Contact', OnTheGo: 'On the go' };
-const onsetText: Record<SleepOnset, string> = { Own: `on ${baby.their} own`, Fed: 'fed to sleep', Rocked: 'rocked', Held: 'held' };
-export const settledText: Record<SettledBy, string> = { Feeding: 'feeding', Soothing: 'soothing', Own: `on ${baby.their} own` };
+// Functions, not tables: the pronouns can change in Settings.
+const onsetText = (onset: SleepOnset) =>
+  ({ Own: `on ${baby.their} own`, Fed: 'fed to sleep', Rocked: 'rocked', Held: 'held' })[onset];
+export const settledText = (by: SettledBy) => ({ Feeding: 'feeding', Soothing: 'soothing', Own: `on ${baby.their} own` })[by];
 export const amountText: Record<SolidAmount, string> = { Taste: 'a taste', Some: 'some', All: 'all of it' };
 
 // Chip labels, in the order the chips appear.
-export const onsetChoices: [SleepOnset, string][] = [['Own', `On ${baby.their} own`], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
-export const settleChoices: [SettledBy, string][] = [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', `On ${baby.their} own`]];
+export const onsetChoices = (): [SleepOnset, string][] =>
+  [['Own', `On ${baby.their} own`], ['Fed', 'Fed'], ['Rocked', 'Rocked'], ['Held', 'Held']];
+export const settleChoices = (): [SettledBy, string][] =>
+  [['Feeding', 'Feeding'], ['Soothing', 'Soothing'], ['Own', `On ${baby.their} own`]];
 
 /** Seconds nursed on one side, counting the side that's running. */
 export function sideSeconds(feed: BabyEvent, side: Side, now: number): number {
@@ -41,7 +45,7 @@ export function describe(e: BabyEvent, now: number): { label: string; meta: stri
       };
     case 'NightWaking': {
       const awake = e.End == null ? 'awake now' : duration(e.End - e.Start);
-      const settled = e.SettledBy ? `back by ${settledText[e.SettledBy]}` : '';
+      const settled = e.SettledBy ? `back by ${settledText(e.SettledBy)}` : '';
       return { label: `Woke · ${awake}`, meta: withNote(settled), time };
     }
     case 'Note':
@@ -59,6 +63,6 @@ export function sleepMeta(sleep: BabyEvent, wakings: BabyEvent[]): string {
     parts.push(`${wakings.length} ${wakings.length === 1 ? 'waking' : 'wakings'}${fed ? ', fed' : ''}`);
   }
   if (sleep.SleepLocation) parts.push(locationText[sleep.SleepLocation]);
-  if (sleep.SleepOnset) parts.push(onsetText[sleep.SleepOnset]);
+  if (sleep.SleepOnset) parts.push(onsetText(sleep.SleepOnset));
   return parts.join(' · ');
 }

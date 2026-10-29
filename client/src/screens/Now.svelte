@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baby } from '../lib/baby.ts';
+  import { baby } from '../lib/baby.svelte.ts';
   import Icon from '../components/Icon.svelte';
   import TodayStrip from '../components/TodayStrip.svelte';
   import type { BabyEvent } from '../lib/db.ts';

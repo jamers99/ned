@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Ned.API.Families;
 using Ned.API.Tracking;
 
 namespace Ned.API.Tests.Mcp;
@@ -54,8 +55,9 @@ public class ConnectedAppTests(NedApiFactory api)
         var saved = await app.GetFromJsonAsync<JsonObject>($"/api/Event({solids})?$select=LoggedBy", cancel);
         Assert.Equal("Jane", saved!["LoggedBy"]!.GetValue<string>());
 
+        var (family, _) = await NedApiFactory.FamilyAsync(app);
         var food = await app.GetFromJsonAsync<JsonObject>(
-            $"/api/Food({FoodGuid.For(name)})?$select=Name,UseCount,LastUsedAt,ModifiedAt", cancel);
+            $"/api/Food({FoodGuid.For(family, name)})?$select=Name,UseCount,LastUsedAt,ModifiedAt", cancel);
         Assert.Equal(name, food!["Name"]!.GetValue<string>());
         Assert.Equal(1, food["UseCount"]!.GetValue<int>());
         Assert.Equal(DateTimeOffset.Parse("2026-10-12T16:30:00Z"), food["LastUsedAt"]!.GetValue<DateTimeOffset>());
@@ -78,7 +80,8 @@ public class ConnectedAppTests(NedApiFactory api)
 
         var saved = await phone.GetFromJsonAsync<JsonObject>($"/api/Event({solids})?$select=LoggedBy", cancel);
         Assert.Equal("John", saved!["LoggedBy"]!.GetValue<string>());
-        var food = await phone.GetAsync($"/api/Food({FoodGuid.For(name)})", cancel);
+        var (family, _) = await NedApiFactory.FamilyAsync(phone);
+        var food = await phone.GetAsync($"/api/Food({FoodGuid.For(family, name)})", cancel);
         Assert.Equal(HttpStatusCode.NotFound, food.StatusCode);
     }
 
@@ -114,8 +117,10 @@ public class ConnectedAppTests(NedApiFactory api)
     [Fact]
     public void FoodGuid_MatchesThePhones()
     {
-        // From client/src/lib/ids.ts: foodGuid('Mango').
-        Assert.Equal(Guid.Parse("d1b871dc-f87b-579e-9e40-9c66f24fa36f"), FoodGuid.For(" Mango "));
+        // From client/src/lib/ids.ts. The first family keeps the Guids its phones gave foods before families.
+        Assert.Equal(Guid.Parse("d1b871dc-f87b-579e-9e40-9c66f24fa36f"), FoodGuid.For(FamiliesUpgrade.FirstFamily, " Mango "));
+        Assert.Equal(Guid.Parse("ea7fee3c-d8c3-5e3b-94e1-6b47a663f80a"),
+            FoodGuid.For(Guid.Parse("0b7c4a52-9a3e-4d8f-b1a6-6f2e9c0d4e17"), "Mango"));
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ export type FeedKind = 'Nursing' | 'Bottle';
 export type Side = 'Left' | 'Right';
 export type SolidAmount = 'Taste' | 'Some' | 'All';
 export type FoodCategory = 'Fruit' | 'Veggies' | 'Protein' | 'Grains' | 'Other';
+export type Pronouns = 'She' | 'He' | 'They';
 
 export interface Synced {
   Guid: string;
@@ -64,6 +65,9 @@ export interface Settings extends Synced {
   /** The night, as minutes after midnight: 8 PM – 6 AM by default. Bedtime aims for its start. */
   NightStartMinutes: number;
   NightEndMinutes: number;
+  /** Empty until a parent fills it in. Missing on rows saved before the name was a setting. */
+  BabyName?: string;
+  BabyPronouns?: Pronouns;
 }
 
 export interface Meta {

@@ -1,7 +1,8 @@
 // Every local write goes through here: write to Dexie, mark the row dirty, and schedule a push.
 // The UI re-renders from Dexie, so nothing waits on the network.
 import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings, type Side } from './db.ts';
-import { foodGuid, settingsGuid } from './ids.ts';
+import { settingsGuid } from './family.ts';
+import { foodGuid } from './ids.ts';
 import { targetsFrom, wakingsDuring } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
@@ -10,7 +11,7 @@ import { day } from './time.ts';
 let lastEdit = 0;
 
 /** A unique, increasing stamp, so a push can tell whether a row changed while it was in flight. */
-function editStamp(): number {
+export function editStamp(): number {
   lastEdit = Math.max(lastEdit + 1, Date.now());
   return lastEdit;
 }
@@ -116,7 +117,7 @@ export async function addSolids(foods: { name: string; category: FoodCategory }[
   const now = Date.now();
   const names = foods.map(f => f.name.trim());
   // Outside the transaction: awaiting anything but IndexedDB inside one lets it commit early.
-  const guids = await Promise.all(names.map(foodGuid));
+  const guids = await Promise.all(names.map(name => foodGuid(name, status.family)));
   await db.transaction('rw', db.events, db.foods, async () => {
     for (const [i, name] of names.entries()) {
       const guid = guids[i];
@@ -156,9 +157,9 @@ export async function deleteGrowth(guid: string) {
 }
 
 async function loadSettings(): Promise<Settings> {
-  const row = await db.settings.get(settingsGuid);
+  const row = await db.settings.get(settingsGuid());
   return {
-    Guid: settingsGuid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0, ...row, ...targetsFrom(row)
+    Guid: settingsGuid(), ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0, ...row, ...targetsFrom(row)
   };
 }
 
