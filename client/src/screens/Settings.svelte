@@ -96,6 +96,16 @@
     {/each}
   </section>
 
+  {#if status.user && status.inviteCode}
+    <section class="card list">
+      <div>
+        <div class="eyebrow">Invite your partner</div>
+        <p class="help">On their phone, they choose Create account and enter this code, so you share one log.</p>
+      </div>
+      <div class="code serif">{status.inviteCode}</div>
+    </section>
+  {/if}
+
   <section class="card list">
     <div class="eyebrow">Sync</div>
     <div class="status">
@@ -143,16 +153,6 @@
       <div class="diagnostic">Nothing yet.</div>
     {/each}
   </section>
-
-  {#if status.user && status.inviteCode}
-    <section class="card list">
-      <div>
-        <div class="eyebrow">Invite your partner</div>
-        <p class="help">On their phone, they choose Create account and enter this code, so you share one log.</p>
-      </div>
-      <div class="code serif">{status.inviteCode}</div>
-    </section>
-  {/if}
 
   {#if status.user}
     <section class="card list">
