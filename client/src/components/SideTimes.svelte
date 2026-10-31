@@ -14,7 +14,7 @@
   const minutes = (side: Side) => Math.floor(sideSeconds(feed, side, now) / 60);
 
   function step(side: Side, direction: number) {
-    void setSideSeconds(feed, side, Math.max(0, sideSeconds(feed, side, Date.now()) + direction * 60));
+    void setSideSeconds(feed, side, sideSeconds(feed, side, Date.now()) + direction * 60);
   }
 
   function typed(side: Side, text: string) {

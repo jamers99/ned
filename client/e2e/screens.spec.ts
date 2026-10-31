@@ -29,6 +29,8 @@ test('day colors', async ({ app, page }) => {
   await page.getByRole('button', { name: /^Left/ }).click();
   await app.wait(6);
   await shot('feed-nursing');
+  await app.button('Adjust sides').click();
+  await shot('feed-adjust-sides');
   await app.button('Done · save feed').click();
   await app.feedButton.click();
   await page.getByRole('tab', { name: 'Bottle' }).click();
@@ -50,6 +52,12 @@ test('day colors', async ({ app, page }) => {
   await shot('day');
   await page.locator('button.sleep').first().click();
   await shot('edit-night');
+  await app.button('Add a waking').click();
+  await shot('edit-night-add-waking');
+  await app.button('Cancel').click();
+  await app.done();
+  await page.getByRole('button', { name: /Nursed · 15m/ }).first().click();
+  await shot('edit-feed');
   await app.done();
 
   await app.button('Insights').click();
@@ -91,6 +99,14 @@ test.describe(() => {
 
     await app.button('Day').click();
     await shot('day');
+    await page.locator('button.sleep').first().click();
+    await app.button('Add a waking').click();
+    await shot('edit-night-add-waking');
+    await app.button('Cancel').click();
+    await app.done();
+    await page.getByRole('button', { name: /^Nursed/ }).last().click();
+    await shot('edit-feed');
+    await app.done();
     await app.button('Insights').click();
     await shot('insights');
   });

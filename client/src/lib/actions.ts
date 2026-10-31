@@ -110,14 +110,14 @@ export function switchSide(feed: BabyEvent, side: Side | null, at = Date.now(), 
 }
 
 /** Sets one side's total to `seconds`. A running side keeps running from there. */
-export function setSideSeconds(feed: BabyEvent, side: Side, seconds: number, at = Date.now()) {
+export function setSideSeconds(feed: BabyEvent, side: Side, seconds: number) {
   const key = side === 'Left' ? 'LeftSeconds' : 'RightSeconds';
   const changes: Partial<BabyEvent> = { [key]: Math.max(0, Math.round(seconds)) };
-  if (feed.ActiveSide === side) changes.ActiveSince = at;
+  if (feed.ActiveSide === side) changes.ActiveSince = Date.now();
   return updateEvent(feed.Guid, changes);
 }
 
-export const endFeed =(feed: BabyEvent, at = Date.now()) => switchSide(feed, null, at, { End: at });
+export const endFeed = (feed: BabyEvent, at = Date.now()) => switchSide(feed, null, at, { End: at });
 
 /** Saves the chosen foods on a Solids event at `at` and bumps each food's recency, creating new foods. */
 export async function addSolids(foods: { name: string; category: FoodCategory }[], amount: BabyEvent['SolidAmount'],
