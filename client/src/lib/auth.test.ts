@@ -6,11 +6,11 @@ async function load() {
   vi.resetModules();
   const { db, getMeta, setMeta } = await import('./db.ts');
   const { status } = await import('./state.svelte.ts');
-  const { apiFetch } = await import('./auth.ts');
+  const { apiFetch, refreshSettled } = await import('./auth.ts');
   await db.delete();
   await db.open();
   await setMeta('refreshToken', 'first');
-  return { apiFetch, getMeta, setMeta, status };
+  return { apiFetch, getMeta, refreshSettled, setMeta, status };
 }
 
 const accessToken = () => `x.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 1800 }))}.y`;
@@ -63,6 +63,25 @@ describe('refresh', () => {
 
     expect(status.needsSignIn).toBe(false);
     expect(await getMeta('refreshToken')).toBe('first');
+  });
+
+  it('holds the update reload until the next token is saved', async () => {
+    const { apiFetch, getMeta, refreshSettled } = await load();
+    let answer!: () => void;
+    server(() => new Promise(resolve =>
+      (answer = () => resolve(Response.json({ accessToken: accessToken(), refreshToken: 'second' })))));
+
+    const sync = apiFetch('/api/Event');
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    let reloaded = false;
+    const reload = refreshSettled().then(() => (reloaded = true));
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(reloaded).toBe(false);
+
+    answer();
+    await reload;
+    expect(await getMeta('refreshToken')).toBe('second');
+    await sync;
   });
 
   it('does not spend the refresh token while the server cannot be reached', async () => {
