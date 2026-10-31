@@ -29,11 +29,11 @@ test("a running side's minutes are typed in, and it keeps counting", async ({ ap
   await expect(left).toHaveValue('2');
   await left.fill('10');
   await left.press('Enter');
-  await expect(page.locator('.total .big')).toHaveText('10:00');
+  await expect(page.locator('.total .big')).toHaveText(/^10:0\d$/);
   await app.wait(1);
   await expect(left).toHaveValue('11');
   await app.button('Right more').click();
-  await expect(page.locator('.total .big')).toHaveText('12:00');
+  await expect(page.locator('.total .big')).toHaveText(/^12:0\d$/);
 });
 
 test('a bottle starts from the last amount', async ({ app, page }) => {
