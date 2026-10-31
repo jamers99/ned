@@ -1,14 +1,15 @@
 <script lang="ts">
   import { baby, capital } from '../lib/baby.svelte.ts';
+  import AddWaking from '../components/AddWaking.svelte';
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addEvent, deleteEvent, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
+  import { deleteEvent, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
-  import { locationText, nursedSeconds, onsetChoices, settleChoices } from '../lib/describe.ts';
+  import { locationText, nursedSeconds, onsetChoices } from '../lib/describe.ts';
   import { closeAll, open } from '../lib/nav.svelte.ts';
   import {
-    askStillAsleep, latestRunning, napNumber, pastWaking, timeAsleep, typicalNapRange, wakingsDuring
+    askStillAsleep, latestRunning, napNumber, timeAsleep, typicalNapRange, wakingsDuring
   } from '../lib/sleep.ts';
   import { clock, stillAsleep } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, endAfter, minute, stopwatch } from '../lib/time.ts';
@@ -77,25 +78,7 @@
 
   const earlier = (start: number) => (start > Date.now() ? start - day : start);
 
-  // A waking that wasn't logged at the time: two time wheels and how she settled.
   let adding = $state(false);
-  let addFrom = $state(0);
-  let addTo = $state(0);
-  let addBy = $state<SettledBy | null>(null);
-  const added = $derived(sleep && adding ? pastWaking(sleep, addFrom, addTo, now) : null);
-
-  function beginAdding() {
-    addFrom = Math.max(sleep!.Start + minute, Date.now() - 45 * minute);
-    addTo = Math.min(Date.now(), addFrom + 15 * minute);
-    addBy = null;
-    adding = true;
-  }
-
-  function saveWaking() {
-    if (!added) return;
-    void addEvent({ Type: 'NightWaking', ...added, SettledBy: addBy });
-    adding = false;
-  }
 </script>
 
 <Overlay {title}>
@@ -195,36 +178,12 @@
         Started {clockShort(sleep.Start)}
       </TimeInput>
       {#if sleep.IsNight && !adding}
-        <button class="pill" onclick={beginAdding}>Add a waking</button>
+        <button class="pill" onclick={() => (adding = true)}>Add a waking</button>
       {/if}
       <button class="pill delete" onclick={deleteSleep}>Delete</button>
     </div>
 
-    {#if adding}
-      <!-- A waking that happened but wasn't logged. -->
-      <section class="add card">
-        <div class="eyebrow">Add a waking</div>
-        <div class="times">
-          <TimeInput class="time" value={added?.Start ?? addFrom} onchange={t => (addFrom = t)} label="Woke at">
-            <span class="time-label">Woke</span>
-            <span class="time-value">{clockTime(added?.Start ?? addFrom)}</span>
-          </TimeInput>
-          <TimeInput class="time" value={added?.End ?? addTo} onchange={t => (addTo = t)} label="Back asleep at">
-            <span class="time-label">Back asleep</span>
-            <span class="time-value">{clockTime(added?.End ?? addTo)}</span>
-          </TimeInput>
-        </div>
-        <div class="chips">
-          {#each settleChoices() as [value, text] (value)}
-            <button class="chip" class:on={addBy === value} onclick={() => (addBy = addBy === value ? null : value)}>{text}</button>
-          {/each}
-        </div>
-        <div class="row">
-          <button class="quiet" onclick={() => (adding = false)}>Cancel</button>
-          <button class="quiet save" disabled={!added} onclick={saveWaking}>Save waking</button>
-        </div>
-      </section>
-    {/if}
+    {#if adding}<AddWaking {sleep} {now} onclose={() => (adding = false)} />{/if}
   {/if}
 
   {#if sleep?.IsNight}
@@ -344,13 +303,6 @@
     font-weight: 700;
   }
 
-  .add {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 18px;
-  }
-
   .huge {
     min-height: 96px;
     border-radius: 28px;
@@ -393,13 +345,6 @@
     gap: 10px;
     font-size: 17px;
     font-weight: 700;
-  }
-
-  .quiet.save {
-    border-color: transparent;
-    background: var(--moss);
-    color: var(--on-moss);
-    font-weight: 800;
   }
 
   .up {

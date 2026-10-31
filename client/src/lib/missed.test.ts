@@ -63,4 +63,11 @@ describe('adding a past waking', () => {
       .toEqual({ Start: at(9, '04:40'), End: at(9, '05:00') });
     expect(pastWaking(night, at(1, '05:10'), at(1, '05:30'), at(9, '05:00'))).toBeNull();
   });
+
+  it('stays inside a night that has ended', () => {
+    const ended = { ...night, End: at(9, '06:30') };
+    expect(pastWaking(ended, at(1, '06:00'), at(1, '07:00'), at(9, '13:00')))
+      .toEqual({ Start: at(9, '06:00'), End: at(9, '06:30') });
+    expect(pastWaking(ended, at(1, '06:40'), at(1, '07:00'), at(9, '13:00'))).toBeNull();
+  });
 });

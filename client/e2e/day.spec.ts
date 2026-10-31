@@ -25,6 +25,40 @@ test('an entry is edited, then deleted', async ({ app, page }) => {
   await expect(page.getByText('Bottle · 4.5 oz')).toBeHidden();
 });
 
+test('a waking missed in the night is added from the night afterwards', async ({ app, page }) => {
+  await page.locator('button.sleep').first().click();
+  await expect(page.locator('.wakings')).toHaveText('2:10 – 2:30 AM');
+  await app.button('Add a waking').click();
+  await app.pickTime('Woke at', '04:15');
+  await app.pickTime('Back asleep at', '04:35');
+  await app.button('Soothing').click();
+  await app.button('Save waking').click();
+  await expect(page.locator('.wakings')).toContainText('4:15');
+  await app.done();
+  await expect(page.locator('.during').first().getByText(/^Woke · 20m/)).toHaveCount(2);
+});
+
+test("a waking can't reach past the night's end", async ({ app, page }) => {
+  await page.locator('button.sleep').first().click();
+  await app.button('Add a waking').click();
+  await app.pickTime('Woke at', '06:00');
+  await app.pickTime('Back asleep at', '07:30');
+  await expect(page.locator('.add .time-value').last()).toHaveText('6:30 AM');
+  await app.pickTime('Woke at', '06:45');
+  await expect(app.button('Save waking')).toBeDisabled();
+});
+
+test("a feed's sides are typed in", async ({ app, page }) => {
+  await page.getByRole('button', { name: /Nursed · 15m/ }).click();
+  const left = page.getByLabel('Left minutes');
+  await expect(left).toHaveValue('8');
+  await left.fill('12');
+  await left.press('Enter');
+  await app.button('Right less').click();
+  await app.done();
+  await expect(page.getByText('L 12m · R 6m')).toBeVisible();
+});
+
 test('steps back a day', async ({ app, page }) => {
   await app.button('Previous day').click();
   await expect(page.getByText('Saturday, Oct 17')).toBeVisible();
