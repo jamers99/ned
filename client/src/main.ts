@@ -2,7 +2,7 @@ import { mount } from 'svelte';
 import { registerSW } from 'virtual:pwa-register';
 import './app.css';
 import App from './App.svelte';
-import { loadUser } from './lib/auth.ts';
+import { loadUser, refreshSettled } from './lib/auth.ts';
 import { watchForProblems } from './lib/diagnostics.svelte.ts';
 import { loadFamily } from './lib/family.ts';
 import { listenForInstall } from './lib/install.svelte.ts';
@@ -11,9 +11,11 @@ import { startClock } from './lib/state.svelte.ts';
 import { abandonSync, syncNow } from './lib/sync.ts';
 
 // The new version installs in the background and the page reloads into it. Checking again whenever the
-// app comes back to the front means an update arrives without a full restart.
+// app comes back to the front means an update arrives without a full restart. Both happen as the app opens,
+// just as a sync refreshes the sign-in, so the reload waits for the refresh: cutting it off signs the phone out.
 registerSW({
   immediate: true,
+  onNeedReload: () => void refreshSettled().then(() => location.reload()),
   onRegisteredSW(_url, registration) {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') void registration?.update();

@@ -120,6 +120,11 @@ function refresh(signal?: AbortSignal | null): Promise<boolean> {
   return refreshing;
 }
 
+/** Waits until no refresh is in flight. Reloading the page mid-refresh would spend the token without saving the next. */
+export async function refreshSettled() {
+  while (refreshing) await refreshing.catch(() => {});
+}
+
 async function refreshOnce(signal?: AbortSignal | null): Promise<boolean> {
   const sent = await getMeta<string>('refreshToken');
   if (!sent) {
