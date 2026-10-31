@@ -1,19 +1,29 @@
 <script lang="ts">
+  import AddWaking from '../components/AddWaking.svelte';
   import Sheet from '../components/Sheet.svelte';
+  import SideTimes from '../components/SideTimes.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { deleteEvent, updateEvent, updateSleep } from '../lib/actions.ts';
   import { db, type BabyEvent, type SettledBy, type Side, type SleepLocation, type SleepOnset, type SolidAmount,
     type WakeMood } from '../lib/db.ts';
   import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
   import { close, nav } from '../lib/nav.svelte.ts';
-  import { dayOf } from '../lib/sleep.ts';
-  import { live } from '../lib/state.svelte.ts';
-  import { clock as clockTime, day, duration, endAfter, mediumDate, startOfDay } from '../lib/time.ts';
+  import { dayOf, wakingsDuring } from '../lib/sleep.ts';
+  import { clock, live } from '../lib/state.svelte.ts';
+  import { clock as clockTime, clockRange, day, endAfter, mediumDate, startOfDay } from '../lib/time.ts';
 
   let { guid }: { guid: string } = $props();
 
   const row = live((g: string) => db.events.get(g), undefined as BabyEvent | undefined, () => guid);
   const e = $derived(row.value);
+  const now = $derived(clock.now);
+
+  // A night's wakings, listed in its sheet so one missed at the time can be added afterwards.
+  const night = $derived(e?.Type === 'Sleep' && e.IsNight ? e : undefined);
+  const wakings = live(async (n: BabyEvent | undefined) =>
+    n ? wakingsDuring(n, await db.events.where('Start').aboveOrEqual(n.Start).toArray()) : [],
+  [] as BabyEvent[], () => night);
+  let adding = $state(false);
 
   const titles: Record<BabyEvent['Type'], string> = {
     Sleep: 'Sleep', NightWaking: 'Night waking', Feed: 'Feed', Solids: 'Solids', Note: 'Note'
@@ -109,6 +119,24 @@
       {/if}
     </div>
 
+    {#if night}
+      <div class="group">
+        <div class="eyebrow">Wakings</div>
+        {#if wakings.value.length}
+          <div class="wakings">
+            {#each wakings.value as w (w.Guid)}
+              <span>{w.End == null ? `Awake since ${clockTime(w.Start)}` : clockRange(w.Start, w.End)}</span>
+            {/each}
+          </div>
+        {/if}
+        {#if adding}
+          <AddWaking sleep={night} {now} onclose={() => (adding = false)} />
+        {:else}
+          <button class="pill add-waking" onclick={() => (adding = true)}>Add a waking</button>
+        {/if}
+      </div>
+    {/if}
+
     {#if e.Type === 'Sleep'}
       {@render choices('Kind', [['nap', 'Nap'], ['night', 'Night']], e.IsNight ? 'night' : 'nap',
         v => v && set({ IsNight: v === 'night' }))}
@@ -121,8 +149,7 @@
     {:else if e.Type === 'Feed' && e.FeedKind === 'Bottle'}
       {@render stepper('Amount', `${e.BottleOz ?? 0} oz`, d => set({ BottleOz: Math.max(0, (e.BottleOz ?? 0) + d / 2) }))}
     {:else if e.Type === 'Feed'}
-      {@render stepper('Left', duration(e.LeftSeconds * 1000), d => set({ LeftSeconds: Math.max(0, e.LeftSeconds + d * 60) }))}
-      {@render stepper('Right', duration(e.RightSeconds * 1000), d => set({ RightSeconds: Math.max(0, e.RightSeconds + d * 60) }))}
+      <SideTimes feed={e} {now} />
       {@render choices('Started on', sides.map(s => [s, s]), e.StartSide, v => set({ StartSide: v as Side | null }))}
     {:else if e.Type === 'Solids'}
       <div class="group">
@@ -179,6 +206,18 @@
     text-align: center;
     font-size: 20px;
     font-weight: 600;
+  }
+
+  .wakings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .add-waking {
+    align-self: flex-start;
   }
 
   textarea {

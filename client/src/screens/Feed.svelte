@@ -1,5 +1,6 @@
 <script lang="ts">
   import Overlay from '../components/Overlay.svelte';
+  import SideTimes from '../components/SideTimes.svelte';
   import TimeInput from '../components/TimeInput.svelte';
   import { addEvent, endFeed, startRunning, switchSide, updateEvent } from '../lib/actions.ts';
   import type { BabyEvent, FeedKind, Side } from '../lib/db.ts';
@@ -23,7 +24,6 @@
   });
 
   let kind = $state<FeedKind>('Nursing');
-  let lastTapped = $state<Side | null>(null);
   let bottleOz = $state(4);
   let bottleTime = $state(Date.now());
 
@@ -38,19 +38,14 @@
 
   function tap(side: Side) {
     const at = Date.now();
-    lastTapped = side;
     if (!feed)
       void startRunning({ Type: 'Feed', FeedKind: 'Nursing', Start: at, StartSide: side, ActiveSide: side, ActiveSince: at });
     else
       void switchSide(feed, feed.ActiveSide === side ? null : side, at);
   }
 
-  function nudge(deltaSeconds: number) {
-    const side = feed?.ActiveSide ?? lastTapped ?? feed?.StartSide;
-    if (!feed || !side) return;
-    const key = side === 'Left' ? 'LeftSeconds' : 'RightSeconds';
-    void updateEvent(feed.Guid, { [key]: Math.max(0, feed[key] + deltaSeconds) });
-  }
+  // Each side's minutes, to fix a side started late or left running: tucked behind a pill so the drawer stays calm.
+  let adjusting = $state(false);
 
   function setStart(start: number) {
     if (feed) void updateEvent(feed.Guid, { Start: start > Date.now() ? start - day : start });
@@ -98,12 +93,16 @@
 
     {#if feed}
       <div class="adjust">
-        <button class="pill" onclick={() => nudge(-60)}>−1 min</button>
-        <button class="pill" onclick={() => nudge(60)}>+1 min</button>
+        <button class="pill" class:on={adjusting} aria-expanded={adjusting} onclick={() => (adjusting = !adjusting)}>
+          Adjust sides
+        </button>
         <TimeInput class="pill" value={feed.Start} onchange={setStart} label="Feed start time">
           Started {clockShort(feed.Start)}
         </TimeInput>
       </div>
+      {#if adjusting}
+        <section class="card side-times"><SideTimes {feed} {now} /></section>
+      {/if}
     {/if}
   {:else}
     <section class="total">
@@ -252,6 +251,18 @@
     justify-content: center;
     gap: 10px;
     flex-wrap: wrap;
+  }
+
+  .pill.on {
+    border-color: var(--terra);
+    color: var(--terra-text);
+  }
+
+  .side-times {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 18px;
   }
 
   .stepper {

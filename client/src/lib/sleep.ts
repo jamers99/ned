@@ -146,12 +146,14 @@ export function askStillAsleep(sleep: BabyEvent, events: BabyEvent[], now: numbe
 
 /**
  * A waking logged after the fact, from the clock times on two time wheels: it starts at the first such time after
- * the night began and ends at the first after that, no later than now. Null if it hasn't happened yet.
+ * the night began and ends at the first after that, no later than now or the night's end. Null if that falls
+ * outside the night.
  */
 export function pastWaking(sleep: BabyEvent, from: number, to: number, now: number): { Start: number; End: number } | null {
+  const limit = Math.min(now, sleep.End ?? now);
   const start = endAfter(sleep.Start, from);
-  if (start >= now) return null;
-  const end = Math.min(now, endAfter(start, to));
+  if (start >= limit) return null;
+  const end = Math.min(limit, endAfter(start, to));
   return end > start ? { Start: start, End: end } : null;
 }
 

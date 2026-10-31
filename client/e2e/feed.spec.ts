@@ -20,6 +20,22 @@ test('nursing switches sides and saves', async ({ app, page }) => {
   await expect(page.getByText('L 5m · R 3m')).toBeVisible();
 });
 
+test("a running side's minutes are typed in, and it keeps counting", async ({ app, page }) => {
+  await app.feedButton.click();
+  await page.getByRole('button', { name: /^Left/ }).click();
+  await app.wait(2);
+  await app.button('Adjust sides').click();
+  const left = page.getByLabel('Left minutes');
+  await expect(left).toHaveValue('2');
+  await left.fill('10');
+  await left.press('Enter');
+  await expect(page.locator('.total .big')).toHaveText('10:00');
+  await app.wait(1);
+  await expect(left).toHaveValue('11');
+  await app.button('Right more').click();
+  await expect(page.locator('.total .big')).toHaveText('12:00');
+});
+
 test('a bottle starts from the last amount', async ({ app, page }) => {
   await app.feedButton.click();
   await page.getByRole('tab', { name: 'Bottle' }).click();
