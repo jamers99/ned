@@ -4,7 +4,7 @@
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { deleteSleep, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
+  import { deleteEvent, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
   import { locationText, nursedSeconds, onsetChoices } from '../lib/describe.ts';
   import { closeAll, open } from '../lib/nav.svelte.ts';
@@ -67,11 +67,11 @@
    * For a sleep started by mistake: deletes it with any wakings logged in it. Feeds stay; they happened.
    * Asks first unless it was only just started.
    */
-  function remove() {
+  function deleteSleep() {
     if (!sleep) return;
     if (Date.now() - sleep.Start > 5 * minute && !confirm(`Delete this ${sleep.IsNight ? 'night' : 'nap'}?`))
       return;
-    void deleteSleep(sleep.Guid);
+    void deleteEvent(sleep.Guid);
     closeAll();
   }
 
@@ -179,7 +179,7 @@
       {#if sleep.IsNight && !adding}
         <button class="pill" onclick={() => (adding = true)}>Add a waking</button>
       {/if}
-      <button class="pill delete" onclick={remove}>Delete</button>
+      <button class="pill delete" onclick={deleteSleep}>Delete</button>
     </div>
 
     {#if adding}<AddWaking {sleep} {now} onclose={() => (adding = false)} />{/if}

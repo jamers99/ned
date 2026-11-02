@@ -57,18 +57,15 @@ export async function updateEvent(guid: string, changes: Partial<BabyEvent>) {
   scheduleSync();
 }
 
+/** Deletes an entry. A sleep takes its wakings with it, so none is left outside a night; feeds stay, they happened. */
 export async function deleteEvent(guid: string) {
+  const event = await db.events.get(guid);
+  if (event?.Type === 'Sleep') for (const w of await storedWakings(event)) await updateEvent(w.Guid, { Deleted: true });
   await updateEvent(guid, { Deleted: true });
 }
 
-/** Deletes a sleep with the wakings logged in it, so none is left behind outside a night. Feeds stay; they happened. */
-export async function deleteSleep(guid: string) {
-  const sleep = await db.events.get(guid);
-  if (!sleep) return;
-  for (const w of wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray()))
-    await deleteEvent(w.Guid);
-  await deleteEvent(guid);
-}
+const storedWakings = async (sleep: BabyEvent) =>
+  wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray());
 
 /**
  * Changes a sleep's times and keeps its wakings inside it: a waking it no longer covers is deleted, and one
@@ -77,7 +74,7 @@ export async function deleteSleep(guid: string) {
 export async function updateSleep(guid: string, changes: Partial<Pick<BabyEvent, 'Start' | 'End'>>) {
   const sleep = await db.events.get(guid);
   if (!sleep) return;
-  const wakings = wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray());
+  const wakings = await storedWakings(sleep);
   const start = changes.Start ?? sleep.Start;
   const end = (changes.End === undefined ? sleep.End : changes.End) ?? Infinity;
   const shift = start - sleep.Start;
@@ -103,8 +100,9 @@ export async function startRunning(fields: Partial<BabyEvent> & Pick<BabyEvent, 
       .where('Start').above(event.Start - 2 * day)
       .filter(e => e.End == null && !e.Deleted)
       .toArray();
-    const since = event.Type === 'NightWaking' ? latestRunning(open, 'Sleep')?.Start ?? Infinity : -Infinity;
-    const existing = open.find(e => e.Type === event.Type && e.FeedKind === event.FeedKind && e.Start >= since);
+    const night = latestRunning(open, 'Sleep');
+    const existing = open.find(e => e.Type === event.Type && e.FeedKind === event.FeedKind &&
+      (e.Type !== 'NightWaking' || (night != null && e.Start >= night.Start)));
     if (!existing) await db.events.add(event);
     return existing;
   });

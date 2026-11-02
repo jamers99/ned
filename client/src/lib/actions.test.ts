@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addEvent, deleteSleep, startRunning, updateSleep } from './actions.ts';
+import { addEvent, deleteEvent, startRunning, updateSleep } from './actions.ts';
 import { db } from './db.ts';
 
 beforeEach(async () => {
@@ -81,7 +81,7 @@ describe('deleting a sleep', () => {
     const night = await addEvent({ Type: 'Sleep', IsNight: true, Start: t0 });
     await addEvent({ Type: 'NightWaking', Start: t0 + hour, End: null });
     await addEvent({ Type: 'Feed', FeedKind: 'Bottle', Start: t0 + hour });
-    await deleteSleep(night.Guid);
+    await deleteEvent(night.Guid);
 
     const kept = (await db.events.toArray()).filter(e => !e.Deleted).map(e => e.Type);
     expect(kept).toEqual(['Feed']);
