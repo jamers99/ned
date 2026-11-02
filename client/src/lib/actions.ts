@@ -3,7 +3,7 @@
 import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings, type Side } from './db.ts';
 import { settingsGuid } from './family.ts';
 import { foodGuid } from './ids.ts';
-import { targetsFrom, wakingsDuring } from './sleep.ts';
+import { latestRunning, targetsFrom, wakingsDuring } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
 import { day } from './time.ts';
@@ -57,9 +57,15 @@ export async function updateEvent(guid: string, changes: Partial<BabyEvent>) {
   scheduleSync();
 }
 
+/** Deletes an entry. A sleep takes its wakings with it, so none is left outside a night; feeds stay, they happened. */
 export async function deleteEvent(guid: string) {
+  const event = await db.events.get(guid);
+  if (event?.Type === 'Sleep') for (const w of await storedWakings(event)) await updateEvent(w.Guid, { Deleted: true });
   await updateEvent(guid, { Deleted: true });
 }
+
+const storedWakings = async (sleep: BabyEvent) =>
+  wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray());
 
 /**
  * Changes a sleep's times and keeps its wakings inside it: a waking it no longer covers is deleted, and one
@@ -68,7 +74,7 @@ export async function deleteEvent(guid: string) {
 export async function updateSleep(guid: string, changes: Partial<Pick<BabyEvent, 'Start' | 'End'>>) {
   const sleep = await db.events.get(guid);
   if (!sleep) return;
-  const wakings = wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray());
+  const wakings = await storedWakings(sleep);
   const start = changes.Start ?? sleep.Start;
   const end = (changes.End === undefined ? sleep.End : changes.End) ?? Infinity;
   const shift = start - sleep.Start;
@@ -84,14 +90,19 @@ export async function updateSleep(guid: string, changes: Partial<Pick<BabyEvent,
 /**
  * Starts a sleep, a night waking or a nursing feed, unless one of that kind is already running. A second tap
  * (or a tap before the screen has caught up) returns the running one instead of starting another.
+ * A waking counts only inside the running night: one left open outside it is never shown, so it mustn't
+ * swallow the tap.
  */
 export async function startRunning(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type'>): Promise<BabyEvent> {
   const event = { ...newEvent(fields), dirty: editStamp() };
   const running = await db.transaction('rw', db.events, async () => {
-    const existing = await db.events
+    const open = await db.events
       .where('Start').above(event.Start - 2 * day)
-      .filter(e => e.Type === event.Type && e.FeedKind === event.FeedKind && e.End == null && !e.Deleted)
-      .first();
+      .filter(e => e.End == null && !e.Deleted)
+      .toArray();
+    const night = latestRunning(open, 'Sleep');
+    const existing = open.find(e => e.Type === event.Type && e.FeedKind === event.FeedKind &&
+      (e.Type !== 'NightWaking' || (night != null && e.Start >= night.Start)));
     if (!existing) await db.events.add(event);
     return existing;
   });

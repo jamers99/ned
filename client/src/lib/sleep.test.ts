@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BabyEvent } from './db.ts';
-import { dayTimeline, defaultTargets, isNightTime, nextSleep, timeAsleep, wakingsDuring } from './sleep.ts';
+import { dayTimeline, defaultTargets, isNightTime, nextSleep, timeAsleep, wakingStart, wakingsDuring } from './sleep.ts';
 import { clock as clockTime } from './time.ts';
 
 const at = (dayOfMonth: number, time: string) => {
@@ -155,5 +155,20 @@ describe('day timeline', () => {
     const note = event({ Type: 'Note', Start: at(8, '09:30'), Text: 'Stirred' });
     const rows = dayTimeline([night, nap1, note], at(8, '00:00'), at(8, '12:00')).rows;
     expect(rows.at(-1)).toMatchObject({ kind: 'sleep', event: nap1, during: [note] });
+  });
+});
+
+describe("a running waking's start", () => {
+  const hour = 3_600_000;
+  const night = { Type: 'Sleep', IsNight: true, Start: 10 * hour, End: null } as BabyEvent;
+  const now = 14 * hour;
+
+  it('takes the time picked, inside the night', () => {
+    expect(wakingStart(night, 13 * hour, now)).toBe(13 * hour);
+  });
+
+  it('takes a time that has not come yet as earlier, then keeps it in the night', () => {
+    expect(wakingStart(night, 15 * hour, now)).toBe(10 * hour);
+    expect(wakingStart(night, 9 * hour, now)).toBe(10 * hour);
   });
 });

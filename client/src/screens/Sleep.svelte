@@ -9,7 +9,7 @@
   import { locationText, nursedSeconds, onsetChoices } from '../lib/describe.ts';
   import { closeAll, open } from '../lib/nav.svelte.ts';
   import {
-    askStillAsleep, latestRunning, napNumber, timeAsleep, typicalNapRange, wakingsDuring
+    askStillAsleep, latestRunning, napNumber, timeAsleep, typicalNapRange, wakingsDuring, wakingStart
   } from '../lib/sleep.ts';
   import { clock, stillAsleep } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, endAfter, minute, stopwatch } from '../lib/time.ts';
@@ -71,7 +71,6 @@
     if (!sleep) return;
     if (Date.now() - sleep.Start > 5 * minute && !confirm(`Delete this ${sleep.IsNight ? 'night' : 'nap'}?`))
       return;
-    for (const w of wakings) void deleteEvent(w.Guid);
     void deleteEvent(sleep.Guid);
     closeAll();
   }
@@ -88,7 +87,7 @@
       <div class="dim">Waking {wakings.length} · awake for</div>
       <div class="big serif">{duration(now - waking.Start)}</div>
       <div class="dim small">Slept {duration(timeAsleep(sleep, wakings, waking.Start))} before this</div>
-      <TimeInput class="adjust" value={waking.Start} onchange={t => updateEvent(waking.Guid, { Start: earlier(t) })}
+      <TimeInput class="adjust" value={waking.Start} onchange={t => updateEvent(waking.Guid, { Start: wakingStart(sleep, t, Date.now()) })}
         label="Woke at">
         Woke {clockTime(waking.Start)} · change
       </TimeInput>
