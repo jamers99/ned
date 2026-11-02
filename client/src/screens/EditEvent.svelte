@@ -3,7 +3,7 @@
   import Sheet from '../components/Sheet.svelte';
   import SideTimes from '../components/SideTimes.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { deleteEvent, updateEvent, updateSleep } from '../lib/actions.ts';
+  import { deleteEvent, deleteSleep, updateEvent, updateSleep } from '../lib/actions.ts';
   import { db, type BabyEvent, type SettledBy, type Side, type SleepLocation, type SleepOnset, type SolidAmount,
     type WakeMood } from '../lib/db.ts';
   import { amountText, locationText, onsetChoices, settleChoices } from '../lib/describe.ts';
@@ -67,7 +67,7 @@
 
   function remove() {
     if (!e || !confirm(`Delete this ${titles[e.Type].toLowerCase()}?`)) return;
-    void deleteEvent(guid);
+    void (e.Type === 'Sleep' ? deleteSleep(guid) : deleteEvent(guid));
     close();
   }
 </script>

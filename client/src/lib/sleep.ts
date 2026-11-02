@@ -50,6 +50,14 @@ export function wakingsDuring(sleep: BabyEvent, events: BabyEvent[]): BabyEvent[
     .sort(byStart);
 }
 
+/**
+ * A running waking's start from a time picked on the wheel: earlier today if the time hasn't come yet, and kept
+ * inside its night, so the drawer keeps showing it (and it can be ended).
+ */
+export function wakingStart(sleep: BabyEvent, picked: number, now: number): number {
+  return Math.min(now, Math.max(sleep.Start, picked > now ? picked - day : picked));
+}
+
 /** Time asleep: a night's span minus the time she was awake during it. */
 export function timeAsleep(sleep: BabyEvent, wakings: BabyEvent[], now: number): number {
   const end = sleep.End ?? now;

@@ -4,12 +4,12 @@
   import Icon from '../components/Icon.svelte';
   import Overlay from '../components/Overlay.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { deleteEvent, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
+  import { deleteSleep, endFeed, startRunning, updateEvent, updateSleep } from '../lib/actions.ts';
   import type { BabyEvent, SettledBy, SleepLocation } from '../lib/db.ts';
   import { locationText, nursedSeconds, onsetChoices } from '../lib/describe.ts';
   import { closeAll, open } from '../lib/nav.svelte.ts';
   import {
-    askStillAsleep, latestRunning, napNumber, timeAsleep, typicalNapRange, wakingsDuring
+    askStillAsleep, latestRunning, napNumber, timeAsleep, typicalNapRange, wakingsDuring, wakingStart
   } from '../lib/sleep.ts';
   import { clock, stillAsleep } from '../lib/state.svelte.ts';
   import { clock as clockTime, clockShort, day, duration, endAfter, minute, stopwatch } from '../lib/time.ts';
@@ -67,12 +67,11 @@
    * For a sleep started by mistake: deletes it with any wakings logged in it. Feeds stay; they happened.
    * Asks first unless it was only just started.
    */
-  function deleteSleep() {
+  function remove() {
     if (!sleep) return;
     if (Date.now() - sleep.Start > 5 * minute && !confirm(`Delete this ${sleep.IsNight ? 'night' : 'nap'}?`))
       return;
-    for (const w of wakings) void deleteEvent(w.Guid);
-    void deleteEvent(sleep.Guid);
+    void deleteSleep(sleep.Guid);
     closeAll();
   }
 
@@ -88,7 +87,7 @@
       <div class="dim">Waking {wakings.length} · awake for</div>
       <div class="big serif">{duration(now - waking.Start)}</div>
       <div class="dim small">Slept {duration(timeAsleep(sleep, wakings, waking.Start))} before this</div>
-      <TimeInput class="adjust" value={waking.Start} onchange={t => updateEvent(waking.Guid, { Start: earlier(t) })}
+      <TimeInput class="adjust" value={waking.Start} onchange={t => updateEvent(waking.Guid, { Start: wakingStart(sleep, t, Date.now()) })}
         label="Woke at">
         Woke {clockTime(waking.Start)} · change
       </TimeInput>
@@ -180,7 +179,7 @@
       {#if sleep.IsNight && !adding}
         <button class="pill" onclick={() => (adding = true)}>Add a waking</button>
       {/if}
-      <button class="pill delete" onclick={deleteSleep}>Delete</button>
+      <button class="pill delete" onclick={remove}>Delete</button>
     </div>
 
     {#if adding}<AddWaking {sleep} {now} onclose={() => (adding = false)} />{/if}

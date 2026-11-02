@@ -3,7 +3,7 @@
 import { db, type BabyEvent, type Food, type FoodCategory, type Growth, type Settings, type Side } from './db.ts';
 import { settingsGuid } from './family.ts';
 import { foodGuid } from './ids.ts';
-import { targetsFrom, wakingsDuring } from './sleep.ts';
+import { latestRunning, targetsFrom, wakingsDuring } from './sleep.ts';
 import { status } from './state.svelte.ts';
 import { scheduleSync } from './sync.ts';
 import { day } from './time.ts';
@@ -61,6 +61,15 @@ export async function deleteEvent(guid: string) {
   await updateEvent(guid, { Deleted: true });
 }
 
+/** Deletes a sleep with the wakings logged in it, so none is left behind outside a night. Feeds stay; they happened. */
+export async function deleteSleep(guid: string) {
+  const sleep = await db.events.get(guid);
+  if (!sleep) return;
+  for (const w of wakingsDuring(sleep, await db.events.where('Start').aboveOrEqual(sleep.Start).toArray()))
+    await deleteEvent(w.Guid);
+  await deleteEvent(guid);
+}
+
 /**
  * Changes a sleep's times and keeps its wakings inside it: a waking it no longer covers is deleted, and one
  * running past its new end stops there. A sleep moved whole takes its wakings along.
@@ -84,14 +93,18 @@ export async function updateSleep(guid: string, changes: Partial<Pick<BabyEvent,
 /**
  * Starts a sleep, a night waking or a nursing feed, unless one of that kind is already running. A second tap
  * (or a tap before the screen has caught up) returns the running one instead of starting another.
+ * A waking counts only inside the running night: one left open outside it is never shown, so it mustn't
+ * swallow the tap.
  */
 export async function startRunning(fields: Partial<BabyEvent> & Pick<BabyEvent, 'Type'>): Promise<BabyEvent> {
   const event = { ...newEvent(fields), dirty: editStamp() };
   const running = await db.transaction('rw', db.events, async () => {
-    const existing = await db.events
+    const open = await db.events
       .where('Start').above(event.Start - 2 * day)
-      .filter(e => e.Type === event.Type && e.FeedKind === event.FeedKind && e.End == null && !e.Deleted)
-      .first();
+      .filter(e => e.End == null && !e.Deleted)
+      .toArray();
+    const since = event.Type === 'NightWaking' ? latestRunning(open, 'Sleep')?.Start ?? Infinity : -Infinity;
+    const existing = open.find(e => e.Type === event.Type && e.FeedKind === event.FeedKind && e.Start >= since);
     if (!existing) await db.events.add(event);
     return existing;
   });

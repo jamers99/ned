@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addEvent, startRunning, updateSleep } from './actions.ts';
+import { addEvent, deleteSleep, startRunning, updateSleep } from './actions.ts';
 import { db } from './db.ts';
 
 beforeEach(async () => {
@@ -25,6 +25,19 @@ describe('starting something that runs', () => {
 
     const types = (await db.events.toArray()).map(e => e.Type).sort();
     expect(types).toEqual(['NightWaking', 'Sleep', 'Sleep']);
+  });
+
+  it("starts a waking even with one left open outside tonight's night, and a second tap still starts only one", async () => {
+    const hour = 3_600_000;
+    await addEvent({ Type: 'NightWaking', Start: Date.now() - 30 * hour, End: null });
+    await startRunning({ Type: 'Sleep', Start: Date.now() - 3 * hour, IsNight: true });
+    const taps = await Promise.all([
+      startRunning({ Type: 'NightWaking', Start: Date.now() }), startRunning({ Type: 'NightWaking', Start: Date.now() })
+    ]);
+
+    expect(taps[0].Guid).toBe(taps[1].Guid);
+    expect(taps[0].Start).toBeGreaterThan(Date.now() - hour);
+    expect((await db.events.toArray()).filter(e => e.Type === 'NightWaking')).toHaveLength(2);
   });
 });
 
@@ -58,5 +71,19 @@ describe("changing a sleep's times", () => {
     await waking(3, 4);
     await updateSleep(sleep.Guid, { Start: t0 + 24 * hour, End: t0 + 34 * hour });
     expect(await wakings()).toEqual([[27, 28]]);
+  });
+});
+
+describe('deleting a sleep', () => {
+  it('deletes the wakings in it too, and keeps the feeds', async () => {
+    const t0 = Date.UTC(2026, 9, 18, 2);
+    const hour = 3_600_000;
+    const night = await addEvent({ Type: 'Sleep', IsNight: true, Start: t0 });
+    await addEvent({ Type: 'NightWaking', Start: t0 + hour, End: null });
+    await addEvent({ Type: 'Feed', FeedKind: 'Bottle', Start: t0 + hour });
+    await deleteSleep(night.Guid);
+
+    const kept = (await db.events.toArray()).filter(e => !e.Deleted).map(e => e.Type);
+    expect(kept).toEqual(['Feed']);
   });
 });

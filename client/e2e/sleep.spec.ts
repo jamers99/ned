@@ -93,6 +93,20 @@ test.describe('a night', () => {
     await expect(page.getByText('Night saved')).toBeVisible();
   });
 
+  test("a waking moved before bedtime stays in the night, and She's awake works again after it", async ({ app, page }) => {
+    await app.sleepButton.click();
+    await app.wait(180);
+    await app.button("She's awake").click();
+    await app.pickTime('Woke at', '20:30');
+    await expect(page.getByText('Woke 9:00 PM · change')).toBeVisible();
+
+    await app.button('Soothing').click();
+    await expect(app.drawer).toContainText('1 waking so far');
+    await app.wait(30);
+    await app.button("She's awake").click();
+    await expect(page.getByText('Waking 2 · awake for')).toBeVisible();
+  });
+
   test('up for the day during a waking ends the night when she woke, and leaves no stray waking', async ({ app, page }) => {
     await app.sleepButton.click();
     await app.wait(600);
