@@ -1,189 +1,71 @@
-# Ned — sleep-first baby tracker
+# Ned — notes for agents
 
-A two-parent baby tracker built around one goal: help the baby sleep well. Replaces the Nara Baby app. Anyone can sign up; a **family** is one baby and the parents who share its log (typically one on iPhone, who logs most entries, and one on Android). It started as one family's app, and that family is still the first one.
+What Ned is, how to run it and how it deploys are in [README.md](README.md). This file holds the rules that keep it simple, fast and correct. The code and the e2e flows are the spec for each screen's behavior; read them rather than restating them here.
 
-**Non-negotiables**
-- **Feels native and instant.** Every tap updates the UI in the same frame. Nothing in the UI ever waits on the network.
-- **Offline-first.** The phone's local DB is the source of truth for the UI; the server is for sync and backup.
-- **Name and pronouns are data.** UI text takes the baby's name and pronouns from `client/src/lib/baby.svelte.ts`, which reads them from Settings — never spelled out in a screen. They can be she, he or they, so text with a verb after the pronoun goes through `verb('goes', 'go')`. Until a parent fills them in, it's "Baby" and they.
-- **Calm and simple.** Fewer features, done beautifully. When in doubt, leave it out.
-- **One-handed at 3am.** Big targets (≥44px, primary actions ≥96px), minimal typing.
+## Rules
 
-## Architecture
+- **Simple and small.** The fewest moving parts that work. Prefer deleting code to adding it, one helper to two, and a plain condition to a clever one. When in doubt, leave it out.
+- **Instant and offline-first.** Every tap writes to Dexie and updates the UI in the same frame. Nothing in the UI waits on the network. No spinners for local actions.
+- **Name and pronouns are data.** UI text takes them from `client/src/lib/baby.svelte.ts` (she, he or they; "Baby" and they until set). A verb after a pronoun goes through `verb('goes', 'go')`. Never spell them out in a screen.
+- **One-handed at 3am.** Targets ≥44px, primary actions ≥96px, minimal typing.
+- **Tokens only.** Every color is a token in `client/src/app.css`, with its night value under `:root.night-theme`; no hex in components. Night has no green and no shadows; text keeps WCAG AA in both themes. Fraunces for headings, big numbers and primary buttons, Nunito Sans (600–800) for the rest. Thin-stroke inline SVG icons (1.7px), no emoji. Match the mockups: https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz
+- **Fast.** Launch comes entirely from the cache and never waits on the network, online or off: the shell, self-hosted woff2 fonts and icons are precached. No component libraries. Timers render `now − Start`/`ActiveSince` on one 1s tick, never accumulated. Transitions use transforms, ≤180ms. `touch-action: manipulation`; `env(safe-area-inset-*)` padding.
+
+## Layout
 
 ```
-/client   PWA — Vite + Svelte 5 + TypeScript, Dexie (IndexedDB), vite-plugin-pwa (Workbox)
-/server   Benevia Core API (.NET 10, PostgreSQL) — OData, entity events. Builds the client into Ned.API/wwwroot
-/tools    nara-import (one-time import of the Nara CSV export; reuses client/src/lib modules)
+/client   PWA: Vite + Svelte 5 + TypeScript, Dexie (IndexedDB), vite-plugin-pwa
+/server   Benevia Core API (.NET 10, PostgreSQL, OData). Builds the client into Ned.API/wwwroot and serves it
+/tools    nara-import: one-time import of a Nara CSV export (columns and mapping in nara.ts), reusing client/src/lib
 ```
 
-- Client is a static PWA served by any static host (or from the server). Installed via Safari/Chrome "Add to Home Screen". `display: standalone`, portrait.
-- No native wrappers, no app stores.
+## Data
 
-## Data model (server entities ⇄ Dexie tables, same shape)
+Server entities and Dexie tables have the same shape (fields in `client/src/lib/db.ts`). Every row: `Guid` (**made on the phone**), `ModifiedAt` (**stamped by the server** on every save), `Deleted` (not `IsDeleted`, which collides with Core), `LoggedBy` (parent's user name; "Nara" for imports), `Family` (**stamped by the server** on create; phones never send or read it). Times are UTC instants, shown in the device's zone; on the phone they are epoch ms and rows carry a `dirty` edit stamp.
 
-All records (the `ISynced` interface): `Guid` (Core's primary key, **generated on the phone**), `ModifiedAt` (DateTimeOffset, **stamped by the server** in a PreSave event on every create/update), `Deleted` (bool — not `IsDeleted`, which collides with Core's generated entity state), `LoggedBy` (string: the parent's user name; "Nara" for imported rows), `Family` (reference, **stamped by the server** when the row is created; phones never send or read it). Store times as UTC instants; display in the device's local time zone. On the phone, times are epoch ms and rows carry a `dirty` edit stamp.
-
-**Event** — one table for everything time-based
-| Field | Notes |
-|---|---|
-| `Type` | `Sleep` \| `NightWaking` \| `Feed` \| `Solids` \| `Note` |
-| `Start` | required |
-| `End` | null while running (sleep/feed timer in progress) |
-| `IsNight` | Sleep only. Set when the sleep starts: true if Start is between Settings' bedtime and morning. Changed only from the Day view's edit sheet |
-| `SleepLocation` | `Crib` \| `Contact` \| `OnTheGo` (nullable) |
-| `SleepOnset` | how she fell asleep: `Own` \| `Fed` \| `Rocked` \| `Held` (nullable) |
-| `WakeMood` | `Happy` \| `Fussy` \| `Crying` (nullable) |
-| `SettledBy` | NightWaking only: `Feeding` \| `Soothing` \| `Own` |
-| `FeedKind` | `Nursing` \| `Bottle` |
-| `LeftSeconds`, `RightSeconds` | Nursing durations (ints) |
-| `StartSide` | `Left` \| `Right` — which side the feed started on |
-| `ActiveSide`, `ActiveSince` | Nursing timer state while running (so the timer survives app close and syncs) |
-| `BottleOz` | decimal |
-| `Foods` | Solids: string[] of food names on the phone; one name per line in a text column on the server |
-| `SolidAmount` | `Taste` \| `Some` \| `All` (nullable) |
-| `Text` | Note text, or free-form note on any event |
-
-Night sleep is ONE `Sleep` event from bedtime to morning wake. Night wakings are separate `NightWaking` events that overlap it. Night sleep total = duration − sum(overlapping wakings).
-
-**Growth** — `MeasuredAt`, `WeightKg`, `LengthCm`, `HeadCm` (each nullable). Display lb/oz and inches.
-
-**Food** — `Name` (unique per family, case-insensitive), `Category` (`Fruit` \| `Veggies` \| `Protein` \| `Grains` \| `Other`), `LastUsedAt`, `UseCount`. Upserted on the client whenever a Solids event is saved. Recents = top 6 by `LastUsedAt`. The `Guid` is a UUIDv5 of the lower-cased name in the family's Guid as namespace, so both phones adding "Mango" offline upsert the same row.
-
-**Settings** (local + synced, one row per family whose `Guid` is the family's) — the baby's name (empty) and pronouns (`She` \| `He` \| `They`), naps per day (2), wake window before a nap (2h30m), wake window before bed (3h30m), night range (`NightStartMinutes`/`NightEndMinutes`, 8 PM – 6 AM). The suggested bedtime is exactly the bedtime setting. The Settings screen gives each one a short plain description. Fields that change get a Core `PropertyAdded` data upgrade that also stamps `ModifiedAt`, so phones pull the row.
-
-**Family** — `InviteCode` ("K7QM-3WXP"), and **Member** (`Guid` = the user's id, `Family`). Not synced to phones: a phone reads its family once (`GET /api/Family`) after signing in. The first family (the parents from before sign-up) has the old food namespace as its Guid (`firstFamily` in `client/src/lib/ids.ts`), so its foods kept their Guids.
-
-**Export** — Settings' **Export data** writes everything on the phone (deleted rows left out) to one CSV for a spreadsheet or another app: one row per event, growth measurement and food, oldest first, each time in local ISO with its offset and in UTC (`client/src/lib/export.ts`). It goes to the share sheet where the phone has one, otherwise downloads.
+- **Event** is one table for Sleep, NightWaking, Feed, Solids and Note. `End = null` means a timer is running.
+- **A night is one Sleep** (`IsNight`) from bedtime to morning; NightWakings overlap it and must stay inside it (`updateSleep` and `deleteEvent` keep them there). Night sleep = its length − wakings. `IsNight` is set when the sleep starts, from Settings' night range, and changes only in the Day view's edit sheet.
+- **Food** is upserted on the phone when a Solids event is saved. Its `Guid` is a UUIDv5 of the lower-cased name in the family's Guid, so both phones adding "Mango" offline write the same row. `Foods` on an event is a string[] on the phone, one name per line on the server.
+- **Settings** is one row per family, `Guid` = the family's. A new field needs a Core `PropertyAdded` upgrade that also stamps `ModifiedAt`, so phones pull it.
+- **Family/Member** aren't synced: a phone reads its family once (`GET /api/Family`) after signing in. The first family's Guid is `firstFamily` in `client/src/lib/ids.ts` (its foods kept their Guids).
 
 ## Sync
 
-The client owns an outbox. Server is a dumb, reliable store.
+The client owns an outbox; the server is a dumb, reliable store (`client/src/lib/sync.ts`).
 
-1. **Write path:** UI writes to Dexie and marks the row `dirty`. UI re-renders from Dexie (liveQuery). Done — the user never waits.
-2. **Push:** debounced 1s after any write, plus on app open / `visibilitychange` to visible / every 60s while open. Send all dirty rows as upserts in one OData `$batch` (`POST /api/$batch`, JSON format): PATCH every row, then POST (with the phone's `Guid`) the ones that returned 404 — Core has no upsert. Clear `dirty` on success unless the row was edited again mid-push; keep it on failure and retry with backoff.
-3. **Pull:** `GET /api/Event?$select=<all fields>&$filter=ModifiedAt ge {cursor − 60s}` (same for Growth, Food, Settings; Core returns only `Guid` without `$select`). Store `cursor` = max `ModifiedAt` received; skip rows whose `ModifiedAt` matches the local copy. The 60s overlap catches saves that commit after a later-stamped one.
-4. **Deletes are soft:** set `Deleted = true` and push. ⚠️ There is deliberately **no** global query filter on `Deleted`, so the standard OData pull returns deleted rows and deletions reach the other phone. Don't add one; filter on the phone instead.
-5. **Conflicts:** last write (server `ModifiedAt`) wins. Two users, rarely editing the same row — keep it simple.
-6. A running timer is just a row with `End = null`, so the other phone sees it after the next sync.
-7. **Family first:** rows are keyed to the family, so the first sync after signing in asks for the family before pushing. A phone that logged as a guest moves its foods to the family's Guids, and its settings too if the family has none yet (joining keeps the family's). Until then a phone keys its rows to the first family's Guid (`client/src/lib/family.ts`).
-8. **Isolation is the server's job:** Core row filters (`ParentsBL`) keep reads to the parent's family, and `FamiliesBL` rejects a save of a row that belongs to another family. Parents can't hard-delete. Core users see everything unless `HasFullAccess = false`, so every account sets it.
-9. **Sync indicator:** a quiet cloud in Now's header, just left of Settings (not shown without an account); tapping it opens Settings. It turns terracotta with a dot once a sync has failed and either a change has waited over an hour to push or the last good sync (kept in `meta`) is over an hour old, and whenever the phone needs a sign-in.
+1. **Push:** 1s after a write, on open, on becoming visible, every 60s. All dirty rows go in one OData `$batch`: PATCH each, then POST the ones that 404 (Core has no upsert). Clear `dirty` unless the row changed mid-push; on failure keep it and back off.
+2. **Pull:** `GET /api/<Entity>?$select=<all fields>&$filter=ModifiedAt ge {cursor − 60s}` (Core returns only `Guid` without `$select`). The overlap catches saves that commit late.
+3. **Deletes are soft.** ⚠️ There is deliberately **no** server filter on `Deleted`, so deletions reach the other phone. Filter on the phone.
+4. **Last write wins** by server `ModifiedAt`.
+5. **Family first:** the first sync after signing in reads the family before pushing; a guest's foods move to the family's Guids, and its settings if the family has none. Until then rows key to `firstFamily`.
+6. **Isolation is the server's job:** `ParentsBL` row filters limit reads to the parent's family, `FamiliesBL` rejects saves into another family, parents can't hard-delete, and every account sets `HasFullAccess = false`.
 
 ## Auth
 
-The phones use Benevia Core's built-in login (access token + refresh token). This is NOT the framework's OAuth 2.1 feature, which is only for AI apps connecting over MCP (below); don't use OAuth in the phones. Read the framework's auth code for the exact endpoints and how it returns tokens.
+Core's built-in login (`POST /api/auth/signin`, `/api/auth/refresh`), not its OAuth (that's only for MCP). Read the framework's auth code for exact shapes.
 
-- **Users:** one Benevia user per parent, all with the Parent role (create, read and write Event, Growth, Food and Settings in their own family; read their Family and Members). No other RBAC.
-- **Sign-up:** `POST /api/signup` (`Families/SignUpController.cs`, anonymous, rate-limited per address) makes the user and either a new family or, with an invite code, a membership in that family. The phone then signs in as usual. No email and no password reset yet. Development seeds one family from `Parents` in configuration.
-- **Sign in once per phone:** a first-run screen with **Sign in** / **Create account** (username + password, and an optional invite code), plus **Try it without an account** (a `guest` meta flag: nothing syncs, everything stays on the phone; signing in later from Settings syncs it all). Settings shows the invite code for the other parent. After that, the user should never see a login again unless they sign out or the refresh token is revoked.
-- **Access token:** keep it in memory only, never in localStorage or IndexedDB. It is fine to lose it when the app closes.
-- **Refresh token:**
-  - Core's login (`POST /api/auth/signin`, `POST /api/auth/refresh`) returns the refresh token in the JSON body and has no cookie option, so it is stored in IndexedDB, and the server sends a strict Content-Security-Policy with no third-party scripts. The app and API share one origin (the server serves the PWA).
-  - Ask the server for a long refresh lifetime (about 90 days, extended on each use) so phones stay signed in.
-- **Sync flow:** before each push/pull, if there is no valid access token, refresh silently. If a request returns 401, refresh once and retry once.
-- **Never spend a refresh token without hearing back:** each refresh token works once, so a refresh the phone gives up on after the server answered signs the phone out. The server sleeps when idle (free App Service plan) and can take longer to wake than a phone waits, so each refresh first wakes it with `HEAD /api/$metadata`, which changes nothing; the refresh itself is never aborted by a sync, and an app update waits for it before reloading the page. Only a 401 from the refresh means signing in again (first re-read the stored token, in case another copy of the app refreshed); anything else is retried like any sync error.
-- **When refresh fails:** the app keeps working fully offline. The outbox keeps queuing, and a small banner says "Sign in to sync". Signing in never touches local data, so nothing is lost.
-- **iPhone note:** a home-screen app has its own storage, separate from Safari. Users must sign in from inside the installed app.
-- **Installing:** while the first screen is open in a browser tab (not from the home screen), a small card says Ned works best as an app and how to install it on that device (`InstallSteps.svelte`): Safari's Share → Add to Home Screen on iPhone and iPad; Chrome's own install offer as an Install chip on Android, or its menu steps when Chrome hasn't offered.
-- **Sign out:** clear tokens only (and keep the family the local rows are keyed to). Ask before also clearing local data.
+- Access token in memory only. The refresh token comes in the JSON body, so it lives in IndexedDB; the server sends a strict CSP with no third-party scripts, and app and API share one origin. Ask for a ~90-day refresh lifetime, extended on use.
+- Before a sync with no valid access token, refresh silently; on a 401, refresh once and retry once.
+- **Never spend a refresh token without hearing back.** Each works once. The server sleeps when idle, so wake it first with `HEAD /api/$metadata`; never abort a refresh, and an app update waits for one before reloading. Only a 401 from the refresh means signing in again (re-read the stored token first, in case another copy refreshed); anything else retries like a sync error.
+- Sign-up is `POST /api/signup` (`Families/SignUpController.cs`): a new family, or a membership with an invite code. Then the phone signs in as usual.
+- When refresh fails the app keeps working offline and shows "Sign in to sync". Signing in never touches local data. Signing out clears tokens only (keeping the family the rows are keyed to) and asks before clearing local data.
+- Guest mode (`guest` meta flag) syncs nothing until the parent signs in from Settings.
 
-## MCP (AI apps)
+## MCP
 
-An AI app such as Claude connects to `https://<host>/mcp` as a custom connector, mainly to answer questions about the data and sometimes to log entries. `server/Ned.API/Mcp/NedMcp.cs` wires up Core's MCP server (`Benevia.Core.MCP`: generic OData tools that stage writes in a Core workflow and apply them when the user approves) and Core's OAuth.
+`server/Ned.API/Mcp/NedMcp.cs` wires Core's MCP server and OAuth, on only when `OAuth:Secret` is set (outside Development `OAuth:PublicOrigin` too).
 
-- **On only with a secret:** MCP and OAuth are added when `OAuth:Secret` is set; outside Development `OAuth:PublicOrigin` is required with it, since Azure's proxy hides the https address.
-- **Loopback:** the MCP tools call `/api` over a socket at the address the server listens on. Azure's container has no IPv6 loopback, so `NedMcp` turns a wildcard listen address (`[::]`, `*`, `+`) into `0.0.0.0`, which Core dials as `127.0.0.1`.
-- **Sign-in:** OAuth sends the browser to `/oauth/consent` (`Mcp/consent.html` + `consent.js`, served by the server, not the PWA): sign in as a parent, then Allow. The app sees only that parent's family. It grants read, and write if left checked, never Core's delete scope: Ned deletes softly so the other phone hears about it. The PWA's service worker must not answer `/connect/` or `/oauth/` navigations.
-- **Keep the phone's logic on the phone.** The UI stays offline-first; the server only fills in what an app can't: `LoggedBy` defaults to the signed-in parent when empty (also for rows logged before signing in), `Family` is stamped on creation (so the staged rows of a connected app pass the row filters), and a Solids event logged by a connected app counts its foods in Food (same UUIDv5 as the phones). Phones count their own foods, so the server leaves their solids alone.
-- **Agent instructions:** `NedMcp.AppInstructions`, appended to Core's rules. Clients cut the whole block at 2,048 bytes, so keep it under ~800 bytes; derived rules an agent must follow (IsNight from the night range, soft deletes) go there.
+- The tools call `/api` over loopback; a wildcard listen address becomes `0.0.0.0`, because Azure's container has no IPv6 loopback.
+- Consent is `/oauth/consent` (`Mcp/consent.html` + `consent.js`): read, and write if left checked, never delete. The service worker must not answer `/connect/` or `/oauth/` navigations.
+- **Phone logic stays on the phone.** The server only fills what an app can't: `LoggedBy` when empty, `Family` on create, and Food counts for Solids logged by a connected app.
+- `NedMcp.AppInstructions` is cut with Core's rules at 2,048 bytes, so keep it under ~800.
+
+## Sleep logic
+
+All client-side, in `client/src/lib/sleep.ts`. Awake time = now − end of the last sleep. The target is Settings' wake window before a nap, or before bed once the day's naps are done or another nap can't fit before bedtime; a nap's window is ± 10 min, and bedtime is the bedtime setting. A night shows in Day on the morning it ends (on today while it runs, without counting toward today). Missed logging reaches back at most a day.
 
 ## Tests
 
-- `client/src/**/*.test.ts` (Vitest): the logic in `lib/` — sleep math, sync, auth, export.
-- `client/e2e/` (Playwright, `npm run e2e`, runs in CI): flows through the real screens in a phone-sized Chromium. `fixtures.ts` starts every test at Sunday Oct 18 2026, 1 PM (America/Chicago) on Playwright's fake clock, with three days of history written into IndexedDB as a guest, so nothing needs a server. `app.wait(minutes)` moves the clock on. When a screen changes on purpose, change its flow; when a bug is fixed, add one.
-- `npm run e2e:screens` saves every screen in day and night colors to `client/e2e/screens/` (not committed). Look them over after a UI change; they aren't compared pixel by pixel.
-
-## Performance rules (client)
-
-- Precache the entire app shell, fonts, and icons. Launch must not touch the network.
-- Self-host the fonts (Fraunces, Nunito Sans) as woff2 subsets; `font-display: swap`.
-- Timers render from `Start`/`ActiveSince`: `now − start`, ticking with one `requestAnimationFrame`/1s interval. Never accumulate in memory.
-- Optimistic everything. No spinners for local actions.
-- `touch-action: manipulation` globally; no 300ms tap delay. Prefer CSS transforms for transitions; keep them ≤180ms.
-- Keep the JS bundle small (target < 80 KB gzipped). No component libraries.
-- Use `viewport-fit=cover` and `env(safe-area-inset-*)` padding.
-
-## Design
-
-Mockups: https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz (8 phone screens). Match them.
-
-Cottage feel: warm linen, sage for sleep, terracotta for awake time and feeds, soft serif for headings and times.
-
-| Token | Value | Use |
-|---|---|---|
-| ground | `#F4EEE3` | app background |
-| surface | `#FCF9F3` | cards, buttons |
-| line | `#E3D8C6` | borders |
-| ink | `#3A2F25` | text, primary dark button |
-| muted | `#6E6152` | secondary text |
-| moss | `#56654A` | sleep, primary action |
-| moss-deep | `#3E4A35` | sleep text on light |
-| moss-soft | `#E4E7D7` | sleep callouts |
-| terra | `#B0583A` | awake, active feed side |
-| terra-text | `#93452B` | terracotta text on light |
-| peach | `#F6D9C3` | "Woke up" / "She's awake" buttons in the sleep drawer |
-| night-bg | `#0B0807` | night colors background |
-| night-text | `#E9A48C` / `#B9785F` | night colors text (dim, warm, no blue light) |
-
-`client/src/app.css` is the style sheet: every color is a token there, with its night value under `:root.night-theme`. Screens use tokens only — no hex values in components — so the night colors reach every screen. Night has no green, no shadows, and text pairs keep WCAG AA contrast in both themes.
-
-Type: **Fraunces** (headings, big numbers, primary buttons), **Nunito Sans** (everything else, 600–800 weight). Radii: cards 24–26px, big buttons 30px, chips fully round. Icons: thin stroke inline SVG (1.7px), no emoji.
-
-## Screens
-
-1. **Now** — sleep and feeds weigh the same; sleep is not a separate mode. A status card on top: while awake, awake-since + big duration and the wake-window progress bar with the target nap/bedtime window (tapping it opens a short plain explanation of the bar, the target zone and the times); while asleep, the running sleep (or the running night waking) with the typical-nap hint, and tapping it opens the sleep drawer. Below it, two equal big buttons, **Sleep** (moss) and **Feed** (terracotta). One tap on Sleep starts the sleep at now (it says **Start nap** / **Start night** from the `IsNight` default) and opens its drawer; Feed opens its drawer. While one is running, its button shows a live dot (the Feed button also the feed's timer; the sleep's timer is on the card) and opens its drawer; when idle, Feed says how long ago she last fed. A wide **Solids** card says when she last ate and what, with a small square Note button beside it (notes are rare). Today strip (24h bar of sleeps and feeds). Tabs: Now, Day, Insights.
-2. **Sleep drawer** — a full-height drawer like Feed, for the running sleep (the Sleep button already started it; no nap/night toggle). It shows: running timer, "typical nap length" hint, one-tap chips for Where and Fell asleep, "Started …" to adjust the start. A nap is plain stop/start: big **Woke up** ends it; a feed afterwards is its own event, and falling back asleep is another nap. When a nap runs well past her usual longest (upper quartile + max(30 min, half of it); 3h before there's history), the Now card and the drawer gently ask **Still asleep?** — "Still asleep" quiets it for an hour, **Woke at…** ends the nap at a picked time and opens the Woke-up sheet. A night has big **She's awake** (starts a NightWaking), **Add a waking** (start/end times and how she settled, for one missed at the time) and **Up for the day**. During a waking the drawer shows the awake-for timer (its start adjustable, kept inside the night), big **Feed** plus Solids / Note (the normal screens, which return to the drawer when closed), then **Back asleep**: one button settling "by feeding" if she fed during the waking, otherwise Soothing / On her own. A **Delete** pill next to "Started …" deletes a sleep started by mistake and any wakings in it (feeds stay), asking first once it's over 5 minutes old. Missed logging never reaches back more than a day.
-3. **Woke-up sheet** — saved duration, editable start/end time buttons, wake mood chips, next sleep window callout, Done.
-4. **Night colors** — no separate night mode. From bedtime to morning, and while a night sleep runs, the whole app switches to near-black with dim warm text (the `night-theme` class on `<html>` remaps the color tokens).
-5. **Feed** — Nursing/Bottle toggle. Nursing: two big round Left/Right buttons; tap starts that side, tap again pauses, tap the other side switches; live per-side and total time; "last feed started on X · Nh ago"; start-time adjust, and an **Adjust sides** pill that opens each side's minutes (tap to type, or −/+; a running side keeps counting from there); Done saves. While a side is running, the screen stays on (Screen Wake Lock, taken again when the app returns to the front). Bottle: oz stepper.
-6. **Solids** — search/add field (typing a new name offers "+ Add 'Mango'"), Recents chips, category tabs with preset chips (multi-select), optional amount (A taste / Some / All of it), Save with count.
-7. **Day** — date switcher, totals (sleep, naps, feeds), chronological list: sleep blocks (moss), awake gaps shown as wake windows (terracotta line + "Awake 2h 30m"), feed/solids rows with details. Anything logged during a sleep (night wakings, night feeds, solids, notes) hangs off that sleep's block on a moss line at the left (normal rows, indented, in time order), so a night reads as one group; it still counts in the totals. A night shows on the day it ends; while it's still running it shows on today (even before midnight) but doesn't count toward today's totals, nor do the feeds in it. Tap any row (or grouped row) to edit or delete (deleting a sleep deletes its wakings too, in `deleteEvent`). A night's edit sheet lists its wakings and has **Add a waking** (the drawer's card), kept inside the night; a nursing feed's sheet has each side's minutes, typed or stepped.
-8. **Insights** — longest night stretch by month (from imported feed history + new sleep data), avg bedtime and spread (7 days), night wakings per night and how settled, the "best last wake window" pattern card (needs ~14 days of data; show "unlocks after…" until then). Link to **Growth**.
-9. **Growth** — weight, length, head charts over time (optional WHO girls percentile bands), list of measurements, "Add measurement".
-
-Wake-window logic: awake time = now − end of the last sleep. Target comes from Settings (before a nap, or before bed once the day's naps are done or another nap can no longer start in time to leave the before-bed wake window, including a nap she skipped); show a nap's window as target ± 10 min; bedtime is the bedtime setting. Keep it all client-side.
-
-## Nara import (`/tools/nara-import`)
-
-Input: `export_narababy_<name>_YYYYMMDD.csv`. Use the `Start Date/time (Epoch)` column (ms, UTC) for times — the local-time column can mix time zones. Generate a deterministic Guid per row from `_activityKey` so re-running is idempotent. Push via OData `$batch` in chunks of ~200.
-
-| Nara `Type` | → | Mapping |
-|---|---|---|
-| Breastfeed | Event Feed/Nursing | `LeftSeconds`/`RightSeconds` from the duration columns (blank = 0); `StartSide` from Begin Side; strip `.nonTimer` suffixes; `End = Start + Left + Right` |
-| Bottle Feed | Event Feed/Bottle | `BottleOz` from Breast Milk Volume, else Volume (unit FLOZ) |
-| Solid Feed | Event Solids | Foods: split on newline; each entry may look like `Cereal: amountKey=ALL; reactionKey=LOVE` — name before `:`; `amountKey` LITTLE→Taste, ALL→All. Upsert each name into Food (Category from a small map; unknown → Other) |
-| Sleep | Event Sleep | End from Sleep End (Epoch); `IsNight` by the default rule (with the default settings) |
-| Growth | Growth | IN→cm (×2.54), LB→kg (×0.45359237) |
-| Note column | `Text` | if present |
-| Diaper, Pump, Milestone, Profile | skip | |
-
-Nara's columns carry a type prefix (`[Sleep] End Date/time (Epoch)`, `[Growth] Weight`, …); `tools/nara-import/nara.ts` names them exactly. Run `--dry-run` first and check the counts and samples.
-
-## Build order
-
-1. Server: entities, ModifiedAt stamping event, sync-safe query (bypass IsDeleted filter), two users + built-in login (access/refresh), serve the PWA from the same origin.
-2. Client shell: PWA manifest + precache, fonts, tokens, tab layout, Dexie schema.
-3. Sync engine (outbox, push, pull) with a tiny debug panel in settings.
-4. Sleep flow: Now, sleep drawer, Woke sheet, night colors.
-5. Feed timer, Solids, Notes.
-6. Day view with edit/delete.
-7. Nara import; verify counts.
-8. Growth screen.
-9. Insights (after ~2 weeks of sleep data).
-
-**Later / maybe:** iPhone home-screen widget via Scriptable reading the running Sleep/Feed from the API (timer-style date text); start-time notifications.
-
-## Out of scope
-
-Diapers, pumping, milestones, multiple babies, handoff notifications, native apps, app-store distribution.
+- `client/src/**/*.test.ts` (Vitest) for `lib/`.
+- `client/e2e/` (Playwright, in CI): real screens in a phone-sized Chromium, starting Sunday Oct 18 2026, 1 PM (America/Chicago) on a fake clock with three days of history seeded as a guest; `app.wait(minutes)` moves the clock. When a screen changes on purpose, change its flow; when a bug is fixed, add one.
+- `npm run e2e:screens` saves every screen in day and night colors to `client/e2e/screens/`. Look them over after a UI change.
