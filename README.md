@@ -1,8 +1,29 @@
 # Ned
 
-A calm baby app focusing on sleep and simplicity. An offline-first PWA (`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap is local first; the server is only for sync and backup. See [AGENTS.md](AGENTS.md) for the product spec and the sync design.
+A calm baby app focusing on sleep and simplicity. An offline-first PWA (`client/`) syncs through a Benevia Core API (`server/`), which also serves the app. Every tap is local first; the server is only for sync and backup. [AGENTS.md](AGENTS.md) has the rules for working on it.
 
 Anyone can make an account. The first parent's account starts a family; the other parent enters the invite code shown in that parent's Settings when they create theirs, and the two share one log. A family has one baby.
+
+## What it's for
+
+One goal: help the baby sleep well. It replaced the Nara Baby app for one family and is open to anyone.
+
+- **Native and instant.** Every tap shows in the same frame, and it works fully offline.
+- **Calm and simple.** Fewer features, done beautifully.
+- **One-handed at 3am.** Big targets, almost no typing, and from bedtime to morning the whole app goes near-black with dim warm text.
+
+The screens:
+
+- **Now:** awake time against the next nap or bedtime window, big **Sleep** and **Feed** buttons, Solids and Note, and a 24-hour strip.
+- **Sleep:** one tap starts it. A nap ends with **Woke up**; a night holds its wakings (feeds, how the baby settled) and ends with **Up for the day**.
+- **Feed:** a left/right nursing timer, or a bottle in oz. **Solids:** recent and preset foods, and how much.
+- **Day:** a day's sleeps, wake windows and feeds, each one tappable to edit or delete.
+- **Insights:** longest night stretch, bedtime, night wakings and the best last wake window. **Growth:** weight, length and head charts.
+- **Settings:** the baby's name and pronouns, wake windows and night range, the invite code, and **Export data** to CSV.
+
+It looks like a cottage: warm linen, sage for sleep, terracotta for awake time and feeds, Fraunces and Nunito Sans. [Mockups](https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz).
+
+**Not doing:** diapers, pumping, milestones, more than one baby, handoff notifications, native apps or app stores. **Maybe later:** an iPhone home-screen widget for the running timer, and start-time reminders.
 
 ## Run it locally
 
