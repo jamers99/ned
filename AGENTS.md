@@ -9,7 +9,7 @@ What Ned is, how to run it and how it deploys are in [README.md](README.md). Thi
 - **Name and pronouns are data.** UI text takes them from `client/src/lib/baby.svelte.ts` (she, he or they; "Baby" and they until set). A verb after a pronoun goes through `verb('goes', 'go')`. Never spell them out in a screen.
 - **One-handed at 3am.** Targets ≥44px, primary actions ≥96px, minimal typing.
 - **Tokens only.** Every color is a token in `client/src/app.css`, with its night value under `:root.night-theme`; no hex in components. Night has no green and no shadows; text keeps WCAG AA in both themes. Fraunces for headings, big numbers and primary buttons, Nunito Sans (600–800) for the rest. Thin-stroke inline SVG icons (1.7px), no emoji. Match the mockups: https://claude.ai/artifact/JxGTeQYmZo3M7Pds4MbMMz
-- **Fast.** Launch never touches the network (the shell, self-hosted woff2 fonts and icons are precached). JS under 80 KB gzipped, no component libraries. Timers render `now − Start`/`ActiveSince` on one 1s tick, never accumulated. Transitions use transforms, ≤180ms. `touch-action: manipulation`; `env(safe-area-inset-*)` padding.
+- **Fast.** Launch comes entirely from the cache and never waits on the network, online or off: the shell, self-hosted woff2 fonts and icons are precached. No component libraries. Timers render `now − Start`/`ActiveSince` on one 1s tick, never accumulated. Transitions use transforms, ≤180ms. `touch-action: manipulation`; `env(safe-area-inset-*)` padding.
 
 ## Layout
 
