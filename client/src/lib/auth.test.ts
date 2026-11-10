@@ -35,7 +35,7 @@ describe('refresh', () => {
 
     await apiFetch('/api/Event');
 
-    expect(calls).toEqual(['HEAD /api/$metadata', 'POST /api/auth/refresh', 'GET /api/Event']);
+    expect(calls).toEqual(['GET /api/health', 'POST /api/auth/refresh', 'GET /api/Event']);
     expect(await getMeta('refreshToken')).toBe('second');
   });
 
@@ -94,7 +94,7 @@ describe('refresh', () => {
 
     await expect(apiFetch('/api/Event')).rejects.toThrow('Load failed');
 
-    expect(calls).toEqual(['/api/$metadata']);
+    expect(calls).toEqual(['/api/health']);
     expect(status.needsSignIn).toBe(false);
   });
 });

@@ -53,6 +53,8 @@ app.Use(async (context, next) =>
         "base-uri 'self'; frame-ancestors 'none'";
     await next();
 });
+// Phones call this before spending a refresh token, so a sleeping server is awake by the time it arrives.
+app.MapGet("/api/health", () => Results.Ok());
 app.UseRateLimiter();
 app.UseDefaultFiles();
 app.UseStaticFiles();

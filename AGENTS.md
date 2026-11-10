@@ -46,7 +46,7 @@ Core's built-in login (`POST /api/auth/signin`, `/api/auth/refresh`), not its OA
 
 - Access token in memory only. The refresh token comes in the JSON body, so it lives in IndexedDB; the server sends a strict CSP with no third-party scripts, and app and API share one origin. Ask for a ~90-day refresh lifetime, extended on use.
 - Before a sync with no valid access token, refresh silently; on a 401, refresh once and retry once.
-- **Never spend a refresh token without hearing back.** Each works once. The server sleeps when idle, so wake it first with `HEAD /api/$metadata`; never abort a refresh, and an app update waits for one before reloading. Only a 401 from the refresh means signing in again (re-read the stored token first, in case another copy refreshed); anything else retries like a sync error.
+- **Never spend a refresh token without hearing back.** Each works once. The server sleeps when idle, so wake it first with `GET /api/health`; never abort or time out a refresh, and an app update waits for one before reloading. Only a 401 from the refresh means signing in again (re-read the stored token first, in case another copy refreshed); anything else retries like a sync error.
 - Sign-up is `POST /api/signup` (`Families/SignUpController.cs`): a new family, or a membership with an invite code. Then the phone signs in as usual.
 - When refresh fails the app keeps working offline and shows "Sign in to sync". Signing in never touches local data. Signing out clears tokens only (keeping the family the rows are keyed to) and asks before clearing local data.
 - Guest mode (`guest` meta flag) syncs nothing until the parent signs in from Settings.
