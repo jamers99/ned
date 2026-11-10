@@ -6,9 +6,9 @@ const tenantId = 'Ned';
 const authTimeout = 15_000;
 // The server sleeps when nobody has used it for a while, and waking it can take longer than authTimeout.
 // A refresh token works only once, so giving up on a refresh the server did answer leaves the phone holding
-// a spent token: it is signed out. So each refresh first wakes the server with a request that changes nothing.
+// a spent token: it is signed out. So each refresh first wakes the server with its health check, and the
+// refresh itself is never given a timeout.
 const wakeTimeout = 60_000;
-const refreshTimeout = 30_000;
 
 // The access token lives in memory only. The refresh token is in IndexedDB so phones stay signed in.
 let accessToken = '';
@@ -134,7 +134,7 @@ async function refreshOnce(signal?: AbortSignal | null): Promise<boolean> {
 
   // A network failure propagates: being offline is not a reason to ask for a password.
   const wake = AbortSignal.any([AbortSignal.timeout(wakeTimeout), ...(signal ? [signal] : [])]);
-  await fetch('/api/$metadata', { method: 'HEAD', cache: 'no-store', signal: wake });
+  await fetch('/api/health', { cache: 'no-store', signal: wake });
   let response = await postRefresh(sent);
   if (response.status === 401) {
     // Another copy of the app (a second tab, say) may have used the token first and saved the next one.
@@ -148,6 +148,7 @@ async function refreshOnce(signal?: AbortSignal | null): Promise<boolean> {
   }
   if (!response.ok) throw new Error(`Refresh failed (${response.status})`);
 
+  // Nothing between the response and saving the next token: the old one is already spent.
   const body = await response.json();
   await setMeta('refreshToken', body.refreshToken);
   useAccessToken(body.accessToken);
@@ -159,8 +160,7 @@ function postRefresh(refreshToken: string) {
   return fetch('/api/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: refreshToken }),
-    signal: AbortSignal.timeout(refreshTimeout)
+    body: JSON.stringify({ TenantId: tenantId, OldRefreshToken: refreshToken })
   });
 }
 
