@@ -13,7 +13,7 @@ concurrency: ${{ github.ref }}
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright does not support newer Ubuntu yet
     permissions:
       contents: read
       id-token: write # to sign in to Azure; only main is trusted there
