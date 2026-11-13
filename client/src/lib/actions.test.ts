@@ -1,7 +1,9 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addEvent, deleteEvent, startRunning, updateSleep } from './actions.ts';
+import { addEvent, addSolids, deleteEvent, setFoodCategory, startRunning, updateSleep } from './actions.ts';
 import { db } from './db.ts';
+import { firstFamily } from './ids.ts';
+import { status } from './state.svelte.ts';
 
 beforeEach(async () => {
   await db.delete();
@@ -85,5 +87,18 @@ describe('deleting a sleep', () => {
 
     const kept = (await db.events.toArray()).filter(e => !e.Deleted).map(e => e.Type);
     expect(kept).toEqual(['Feed']);
+  });
+});
+
+describe('moving a food to another category', () => {
+  it('keeps its recency and saves an unused preset as a food', async () => {
+    status.family = firstFamily;
+    await addSolids([{ name: 'Kiwi', category: 'Other' }], null);
+    await setFoodCategory('Kiwi', 'Fruit');
+    await setFoodCategory('Avocado', 'Veggies');
+    const foods = await db.foods.toArray();
+    expect(foods.find(f => f.Name === 'Kiwi')).toMatchObject({ Category: 'Fruit', UseCount: 1 });
+    expect(foods.find(f => f.Name === 'Avocado')).toMatchObject({ Category: 'Veggies', UseCount: 0, LastUsedAt: null });
+    expect(foods.every(f => f.dirty > 0)).toBe(true);
   });
 });
