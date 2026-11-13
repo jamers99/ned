@@ -15,14 +15,13 @@
 
   let query = $state('');
   let search: HTMLInputElement;
-  let tab = $state<keyof typeof foodPresets>('Fruit');
+  let tab = $state<FoodCategory>('Fruit');
   let selected = $state<string[]>([]);
   let amount = $state<SolidAmount | null>(null);
   // Follows the clock until a time is picked; a time later than now means yesterday.
   let picked = $state<number | null>(null);
   const at = $derived(picked ?? clock.now);
 
-  const tabs = Object.keys(foodPresets) as (keyof typeof foodPresets)[];
   const amounts: [SolidAmount, string][] = [['Taste', 'A taste'], ['Some', 'Some'], ['All', 'All of it']];
 
   const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -31,7 +30,9 @@
 
   const recents = $derived(foods.filter(f => f.LastUsedAt).slice(0, 6).map(f => f.Name));
   const allNames = $derived(unique([...foods.map(f => f.Name), ...Object.values(foodPresets).flat()]));
-  const tabNames = $derived(unique([...foodPresets[tab], ...foods.filter(f => f.Category === tab).map(f => f.Name)]));
+  // Added foods that aren't presets go under Other, shown once there are any.
+  const tabs = $derived([...Object.keys(foodPresets), ...(foods.some(f => f.Category === 'Other') ? ['Other'] : [])] as FoodCategory[]);
+  const tabNames = $derived(unique([...(tab === 'Other' ? [] : foodPresets[tab]), ...foods.filter(f => f.Category === tab).map(f => f.Name)]));
   const matches = $derived(query.trim() ? allNames.filter(n => n.toLowerCase().includes(query.trim().toLowerCase())) : []);
   const canAdd = $derived(query.trim() !== '' && !allNames.some(n => same(n, query)));
 
@@ -46,12 +47,7 @@
     search.focus();
   }
 
-  function categoryOf(name: string): FoodCategory {
-    const existing = foods.find(f => same(f.Name, name));
-    if (existing) return existing.Category;
-    const preset = presetCategory(name);
-    return preset === 'Other' ? tab : preset;
-  }
+  const categoryOf = (name: string) => foods.find(f => same(f.Name, name))?.Category ?? presetCategory(name);
 
   function save() {
     if (selected.length === 0) return;

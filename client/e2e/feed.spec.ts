@@ -58,6 +58,10 @@ test('solids adds a new food and it shows on Now and in Recent', async ({ app, p
 
   await page.locator('button.solids').click();
   await expect(page.locator('.group', { hasText: 'Recent' })).toContainText('Kiwi');
+  await app.button('Other').click();
+  await expect(page.locator('.presets')).toContainText('Kiwi');
+  await app.button('Fruit').click();
+  await expect(page.locator('.presets')).not.toContainText('Kiwi');
 });
 
 test('picking a searched food clears the search and keeps it focused', async ({ app, page }) => {
