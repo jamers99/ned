@@ -157,6 +157,17 @@ export async function addSolids(foods: { name: string; category: FoodCategory }[
   scheduleSync();
 }
 
+/** Files a food under another category, saving it as a food first if it's an unused preset. */
+export async function setFoodCategory(name: string, category: FoodCategory) {
+  const guid = await foodGuid(name.trim(), status.family);
+  const food: Food = await db.foods.get(guid) ?? {
+    Guid: guid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0,
+    Name: name.trim(), Category: category, LastUsedAt: null, UseCount: 0
+  };
+  await db.foods.put({ ...food, Category: category, dirty: editStamp() });
+  scheduleSync();
+}
+
 export async function saveGrowth(growth: Omit<Growth, 'Guid' | 'ModifiedAt' | 'Deleted' | 'LoggedBy' | 'dirty'>
   & { Guid?: string }) {
   const existing = growth.Guid ? await db.growth.get(growth.Guid) : undefined;

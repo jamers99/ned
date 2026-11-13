@@ -1,4 +1,4 @@
-import { type App, at, test } from './fixtures.ts';
+import { type App, at, expect, test } from './fixtures.ts';
 
 // Not checks: a picture of every screen, in day and night colors, saved to e2e/screens/ to look over.
 // `npm run e2e:screens`.
@@ -41,6 +41,9 @@ test('day colors', async ({ app, page }) => {
   await app.button('Banana').first().click();
   await app.button('Some').click();
   await shot('solids');
+  await app.button('Oatmeal').first().dispatchEvent('pointerdown');
+  await expect(page.getByText('Move “Oatmeal” to')).toBeVisible();
+  await shot('solids-move');
   await app.button('Close').click();
 
   await app.button('Note').click();
@@ -81,6 +84,12 @@ test.describe(() => {
     await app.sleepButton.click();
     await app.wait(120);
     await shot('sleep-night');
+    await app.button('Close').click();
+
+    await page.locator('button.solids').click();
+    await app.button('Oatmeal').first().dispatchEvent('pointerdown');
+    await expect(page.getByText('Move “Oatmeal” to')).toBeVisible();
+    await shot('solids-move');
     await app.button('Close').click();
     await shot('now-asleep');
 

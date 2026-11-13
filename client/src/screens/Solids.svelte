@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import TimeInput from '../components/TimeInput.svelte';
-  import { addSolids } from '../lib/actions.ts';
+  import { addSolids, setFoodCategory } from '../lib/actions.ts';
   import { db, type Food, type FoodCategory, type SolidAmount } from '../lib/db.ts';
   import { foodPresets, presetCategory } from '../lib/foods.ts';
   import Overlay from '../components/Overlay.svelte';
@@ -17,6 +17,8 @@
   let search: HTMLInputElement;
   let tab = $state<FoodCategory>('Fruit');
   let selected = $state<string[]>([]);
+  // The food held down, whose category pills are showing.
+  let moving = $state<string | null>(null);
   let amount = $state<SolidAmount | null>(null);
   // Follows the clock until a time is picked; a time later than now means yesterday.
   let picked = $state<number | null>(null);
@@ -28,13 +30,31 @@
   const isSelected = (name: string) => selected.some(s => same(s, name));
   const unique = (names: string[]) => names.filter((n, i) => names.findIndex(m => same(m, n)) === i);
 
+  const categoryOf = (name: string) => foods.find(f => same(f.Name, name))?.Category ?? presetCategory(name);
   const recents = $derived(foods.filter(f => f.LastUsedAt).slice(0, 6).map(f => f.Name));
   const allNames = $derived(unique([...foods.map(f => f.Name), ...Object.values(foodPresets).flat()]));
   // Added foods that aren't presets go under Other, shown once there are any.
-  const tabs = $derived([...Object.keys(foodPresets), ...(foods.some(f => f.Category === 'Other') ? ['Other'] : [])] as FoodCategory[]);
-  const tabNames = $derived(unique([...(tab === 'Other' ? [] : foodPresets[tab]), ...foods.filter(f => f.Category === tab).map(f => f.Name)]));
+  const categories = [...Object.keys(foodPresets), 'Other'] as FoodCategory[];
+  const tabs = $derived(categories.filter(c => c !== 'Other' || foods.some(f => f.Category === 'Other')));
+  const tabNames = $derived(unique([...Object.values(foodPresets).flat(), ...foods.map(f => f.Name)])
+    .filter(n => categoryOf(n) === tab));
   const matches = $derived(query.trim() ? allNames.filter(n => n.toLowerCase().includes(query.trim().toLowerCase())) : []);
   const canAdd = $derived(query.trim() !== '' && !allNames.some(n => same(n, query)));
+
+  // Holding a food shows its category pills; the click that ends the hold doesn't toggle it.
+  let holdTimer: ReturnType<typeof setTimeout> | undefined;
+  let held = false;
+  function hold(name: string) {
+    held = false;
+    holdTimer = setTimeout(() => ((held = true), (moving = name)), 450);
+  }
+  const release = () => clearTimeout(holdTimer);
+
+  function move(category: FoodCategory) {
+    if (moving && category !== categoryOf(moving)) void setFoodCategory(moving, category);
+    if (!query.trim()) tab = category;
+    moving = null;
+  }
 
   function toggle(name: string) {
     selected = isSelected(name) ? selected.filter(s => !same(s, name)) : [...selected, name];
@@ -47,8 +67,6 @@
     search.focus();
   }
 
-  const categoryOf = (name: string) => foods.find(f => same(f.Name, name))?.Category ?? presetCategory(name);
-
   function save() {
     if (selected.length === 0) return;
     void addSolids(selected.map(name => ({ name, category: categoryOf(name) })), amount, at);
@@ -57,9 +75,20 @@
 </script>
 
 {#snippet chip(name: string, onpick = toggle)}
-  <button class="chip" class:on={isSelected(name)} onclick={() => onpick(name)}>
+  <button class="chip" class:on={isSelected(name)} class:held={moving === name}
+    onclick={() => (held ? (held = false) : onpick(name))} oncontextmenu={e => e.preventDefault()}
+    onpointerdown={() => hold(name)} onpointerup={release} onpointercancel={release} onpointerleave={release}>
     {#if isSelected(name)}<Icon name="check" size={14} width={3} />{/if}{name}
   </button>
+{/snippet}
+
+{#snippet picker(name: string)}
+  <div class="eyebrow">Move “{name}” to</div>
+  <div class="tabs">
+    {#each categories as category (category)}
+      <button class:on={categoryOf(name) === category} onclick={() => move(category)}>{category}</button>
+    {/each}
+  </div>
 {/snippet}
 
 <Overlay title="Solids">
@@ -77,6 +106,7 @@
         <button class="chip add" onclick={() => pick(query.trim())}><Icon name="plus" size={14} width={2.4} />Add “{query.trim()}”</button>
       {/if}
     </div>
+    {#if moving}<section class="group">{@render picker(moving)}</section>{/if}
   {:else}
     {#if recents.length}
       <section class="group">
@@ -86,11 +116,15 @@
     {/if}
 
     <section class="group">
-      <div class="tabs">
-        {#each tabs as name (name)}
-          <button class:on={tab === name} onclick={() => (tab = name)}>{name}</button>
-        {/each}
-      </div>
+      {#if moving}
+        {@render picker(moving)}
+      {:else}
+        <div class="tabs">
+          {#each tabs as name (name)}
+            <button class:on={tab === name} onclick={() => (tab = name)}>{name}</button>
+          {/each}
+        </div>
+      {/if}
       <div class="chips presets">{#each tabNames as name (name)}{@render chip(name)}{/each}</div>
     </section>
   {/if}
@@ -151,6 +185,16 @@
 
   .search input::placeholder {
     color: var(--placeholder);
+  }
+
+  .chip {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  .chip.held {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
   }
 
   .chosen {

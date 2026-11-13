@@ -64,6 +64,18 @@ test('solids adds a new food and it shows on Now and in Recent', async ({ app, p
   await expect(page.locator('.presets')).not.toContainText('Kiwi');
 });
 
+test('holding a food moves it to another category', async ({ app, page }) => {
+  await page.locator('button.solids').click();
+  await app.button('Banana').first().dispatchEvent('pointerdown');
+  await expect(page.getByText('Move “Banana” to')).toBeVisible();
+  await app.button('Veggies').click();
+  await expect(page.locator('.presets')).toContainText('Banana');
+  await expect(app.button('Save')).toBeDisabled();
+
+  await app.button('Fruit').click();
+  await expect(page.locator('.presets')).not.toContainText('Banana');
+});
+
 test('picking a searched food clears the search and keeps it focused', async ({ app, page }) => {
   await page.locator('button.solids').click();
   const search = page.getByLabel('Find or add a food');
