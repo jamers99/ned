@@ -36,8 +36,8 @@ public partial class Settings : ISynced
     [DefaultValue(Pronouns.They)]
     public partial Pronouns BabyPronouns { get; set; }
 
-    [Property<DataTypes.DateTime>("Baby's birth date", Description = "Midnight on the day, in the parents' zone. Empty until a parent fills it in.")]
-    public partial DateTimeOffset? BabyBirthDate { get; set; }
+    [Property<DataTypes.Text>("Baby's birth date", Description = "A calendar date, YYYY-MM-DD. Empty until a parent fills it in.")]
+    public partial string BabyBirthDate { get; set; }
 }
 
 public enum Pronouns

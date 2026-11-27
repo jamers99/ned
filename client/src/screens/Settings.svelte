@@ -11,7 +11,7 @@
   import { targetsFrom, type SleepTargets } from '../lib/sleep.ts';
   import { live, status } from '../lib/state.svelte.ts';
   import { lastSyncedText, syncNow } from '../lib/sync.ts';
-  import { atMinuteOfDay, clock as clockTime, duration, fromDateInput, minute, toDateInput } from '../lib/time.ts';
+  import { atMinuteOfDay, clock as clockTime, duration, minute, toDateInput } from '../lib/time.ts';
 
   const row = live(guid => db.settings.get(guid), undefined as Settings | undefined, settingsGuid);
   const targets = $derived(targetsFrom(row.value));
@@ -72,9 +72,8 @@
     </label>
     <label class="name">
       <span>Born</span>
-      <input type="date" value={row.value?.BabyBirthDate ? toDateInput(row.value.BabyBirthDate) : ''}
-        max={toDateInput(Date.now())} onchange={e => updateSettings({
-          BabyBirthDate: e.currentTarget.value ? fromDateInput(e.currentTarget.value) : null })} />
+      <input type="date" value={row.value?.BabyBirthDate ?? ''} max={toDateInput(Date.now())}
+        onchange={e => updateSettings({ BabyBirthDate: e.currentTarget.value })} />
     </label>
     <div class="chips" role="group" aria-label="Pronouns">
       {#each pronounChoices as [value, text] (value)}

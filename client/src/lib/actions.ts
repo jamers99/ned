@@ -160,11 +160,13 @@ export async function addSolids(foods: { name: string; category: FoodCategory }[
 /** Files a food under another category, saving it as a food first if it's an unused preset. */
 export async function setFoodCategory(name: string, category: FoodCategory) {
   const guid = await foodGuid(name.trim(), status.family);
-  const food: Food = await db.foods.get(guid) ?? {
-    Guid: guid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0,
-    Name: name.trim(), Category: category, LastUsedAt: null, UseCount: 0
-  };
-  await db.foods.put({ ...food, Category: category, dirty: editStamp() });
+  await db.transaction('rw', db.foods, async () => {
+    const food: Food = await db.foods.get(guid) ?? {
+      Guid: guid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0,
+      Name: name.trim(), Category: category, LastUsedAt: null, UseCount: 0
+    };
+    await db.foods.put({ ...food, Category: category, dirty: editStamp() });
+  });
   scheduleSync();
 }
 

@@ -1,6 +1,6 @@
 import type { BabyEvent } from './db.ts';
 import { byStart, dayOf, type SleepTargets, wakingsDuring } from './sleep.ts';
-import { atMinuteOfDay, clock as clockText, day, hour, minuteOfDay, startOfDay } from './time.ts';
+import { addDays, atMinuteOfDay, clock as clockText, day, hour, minuteOfDay, startOfDay } from './time.ts';
 
 interface Night {
   /** The morning it ended, as the Day screen files it. */
@@ -27,6 +27,9 @@ function loggedNights(events: BabyEvent[]): Night[] {
 }
 
 const wakingsIn = (night: Night, events: BabyEvent[]) => night.pieces.flatMap(piece => wakingsDuring(piece, events));
+
+/** Rounds to one decimal place, for the numbers Insights shows. */
+const tenths = (n: number) => Math.round(n * 10) / 10;
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -83,19 +86,20 @@ export function stretchByMonth(events: BabyEvent[]): { label: string; hours: num
     const [year, month] = key.split('-').map(Number);
     return {
       label: new Date(year, month, 1).toLocaleDateString([], { month: 'short' }),
-      hours: Math.round((median(byMonth.get(key)!) / hour) * 10) / 10
+      hours: tenths(median(byMonth.get(key)!) / hour)
     };
   });
 }
 
+/** Bedtime as minutes after the evening's midnight, so 12:30 AM sorts after 11 PM. */
+function bedMinute(night: Night): number {
+  const m = minuteOfDay(night.start);
+  return m < 12 * 60 ? m + 24 * 60 : m;
+}
+
 /** Average bedtime over the last week and how much it varies (standard deviation, in minutes). */
 export function bedtimeStats(events: BabyEvent[], now: number): { average: number; spreadMinutes: number } | null {
-  const bedtimes = loggedNights(events)
-    .filter(night => night.start > now - 7 * day)
-    .map(night => {
-      const m = minuteOfDay(night.start);
-      return m < 12 * 60 ? m + 24 * 60 : m;
-    });
+  const bedtimes = loggedNights(events).filter(night => night.start > now - 7 * day).map(bedMinute);
   if (bedtimes.length < 2) return null;
 
   const mean = bedtimes.reduce((a, b) => a + b, 0) / bedtimes.length;
@@ -105,19 +109,17 @@ export function bedtimeStats(events: BabyEvent[], now: number): { average: numbe
 
 /** Wakings per night, and how many of them a feed settled, for each of the last eight weeks (oldest first). */
 export function wakingsByWeek(events: BabyEvent[], now: number): { label: string; perNight: number; fedPerNight: number }[] {
-  const live = events.filter(e => !e.Deleted);
-  const nights = loggedNights(live);
+  const nights = loggedNights(events);
   const weeks = [];
   for (let k = 7; k >= 0; k--) {
     const from = now - (k + 1) * 7 * day;
     const inWeek = nights.filter(night => night.start > from && night.start <= from + 7 * day);
     if (inWeek.length === 0) continue;
-    const wakings = inWeek.flatMap(night => wakingsIn(night, live));
-    const perNight = (count: number) => Math.round((count / inWeek.length) * 10) / 10;
+    const wakings = inWeek.flatMap(night => wakingsIn(night, events));
     weeks.push({
       label: new Date(from + day).toLocaleDateString([], { month: 'numeric', day: 'numeric' }),
-      perNight: perNight(wakings.length),
-      fedPerNight: perNight(wakings.filter(w => w.SettledBy === 'Feeding').length)
+      perNight: tenths(wakings.length / inWeek.length),
+      fedPerNight: tenths(wakings.filter(w => w.SettledBy === 'Feeding').length / inWeek.length)
     });
   }
   return weeks;
@@ -130,18 +132,13 @@ const duringNight = (ms: number, nights: Night[]) => nights.some(n => n.pieces.s
 export function feedSplit(events: BabyEvent[], now: number): { day: number; night: number } | null {
   const nights = loggedNights(events);
   const today = startOfDay(now);
-  const feeds = events.filter(e => isFeed(e) && e.Start >= today - 7 * day && e.Start < today);
+  const feeds = events.filter(e => isFeed(e) && e.Start >= addDays(today, -7) && e.Start < today);
   const days = new Set(feeds.map(feed => startOfDay(feed.Start))).size;
   if (days < 2) return null;
   const atNight = feeds.filter(feed => duringNight(feed.Start, nights)).length;
-  const perDay = (count: number) => Math.round((count / days) * 10) / 10;
-  return { day: perDay(feeds.length - atNight), night: perDay(atNight) };
+  return { day: tenths((feeds.length - atNight) / days), night: tenths(atNight / days) };
 }
 
-/**
- * Of a few things about the day before (naps, bedtime, day feeds), the one whose nights differ most in
- * wakings over the last four weeks, with the calmer side first. Needs three nights on each side.
- */
 /** How many night feeds most babies still take at this age: a rough guide, not a rule. */
 export function typicalNightFeeds(months: number): string {
   if (months < 2) return '2–4';
@@ -151,50 +148,39 @@ export function typicalNightFeeds(months: number): string {
   return '0';
 }
 
-/** Under about three months nights follow feeds, not the day before, so there is nothing to compare yet. */
-export const monthsBeforeNightPatterns = 3;
-
+/**
+ * Of a few things about the day before (naps, bedtime, day feeds), the one whose nights differ most in
+ * wakings over the last four weeks, with the calmer side first. Needs three nights on each side.
+ */
 export function goodNights(events: BabyEvent[], targets: Pick<SleepTargets, 'NapsPerDay' | 'NightStartMinutes'>, now: number) {
   const live = events.filter(e => !e.Deleted);
   const nights = loggedNights(live);
-  const naps = live.filter(e => e.Type === 'Sleep' && !e.IsNight && e.End != null);
-  const feeds = live.filter(isFeed);
-  const bedtime = clockText(atMinuteOfDay(now, targets.NightStartMinutes));
-  const recent = nights.filter(night => night.start > now - 28 * day);
+  const dayBefore = (night: Night, e: BabyEvent) => e.Start > night.start - 14 * hour && (e.End ?? e.Start) <= night.start;
+  const recent = nights.filter(night => night.start > now - 28 * day).map(night => ({
+    night,
+    wakings: wakingsIn(night, live).length,
+    naps: live.filter(e => e.Type === 'Sleep' && !e.IsNight && e.End != null && dayBefore(night, e)).length,
+    feeds: live.filter(e => isFeed(e) && dayBefore(night, e) && !duringNight(e.Start, nights)).length
+  }));
   // Babies take fewer feeds as they grow, so split at this baby's usual count rather than a fixed one.
-  const dayFeeds = (night: Night) =>
-    feeds.filter(f => f.Start < night.start && f.Start > night.start - 14 * hour && !duringNight(f.Start, nights)).length;
-  const usualFeeds = recent.length ? Math.ceil(median(recent.map(dayFeeds))) : 0;
+  const usualFeeds = recent.length ? Math.ceil(median(recent.map(r => r.feeds))) : 0;
+  const { NapsPerDay: naps, NightStartMinutes: bedtime } = targets;
 
-  const factors: { sides: [string, string]; test: (night: Night) => boolean }[] = [
-    {
-      sides: [`${targets.NapsPerDay} ${targets.NapsPerDay === 1 ? 'nap' : 'naps'} or fewer`, `${targets.NapsPerDay + 1}+ naps`],
-      test: night => naps.filter(nap => nap.End! <= night.start && nap.Start > night.start - 14 * hour).length <= targets.NapsPerDay
-    },
-    {
-      sides: [`a bedtime by ${bedtime}`, 'a later bedtime'],
-      test: night => {
-        const m = minuteOfDay(night.start);
-        return (m < 12 * 60 ? m + 24 * 60 : m) <= targets.NightStartMinutes;
-      }
-    },
-    {
-      sides: [`${usualFeeds}+ day feeds`, 'fewer day feeds'],
-      test: night => dayFeeds(night) >= usualFeeds
-    }
+  const factors: { sides: [string, string]; test: (r: (typeof recent)[number]) => boolean }[] = [
+    { sides: [`${naps} ${naps === 1 ? 'nap' : 'naps'} or fewer`, `${naps + 1}+ naps`], test: r => r.naps <= naps },
+    { sides: [`a bedtime by ${clockText(atMinuteOfDay(now, bedtime))}`, 'a later bedtime'], test: r => bedMinute(r.night) <= bedtime },
+    { sides: [`${usualFeeds}+ day feeds`, 'fewer day feeds'], test: r => r.feeds >= usualFeeds }
   ];
-  const average = (group: Night[]) => group.reduce((sum, night) => sum + wakingsIn(night, live).length, 0) / group.length;
-  let best: { calm: string; rough: string; calmWakings: number; roughWakings: number } | null = null;
-  for (const { sides, test } of factors) {
-    const yes = recent.filter(test);
-    const no = recent.filter(night => !test(night));
-    if (yes.length < 3 || no.length < 3) continue;
-    const [a, b] = [average(yes), average(no)];
-    if (Math.abs(a - b) < 0.5 || (best && Math.abs(a - b) <= best.roughWakings - best.calmWakings)) continue;
-    const round = (n: number) => Math.round(n * 10) / 10;
-    best = a < b
-      ? { calm: sides[0], rough: sides[1], calmWakings: round(a), roughWakings: round(b) }
-      : { calm: sides[1], rough: sides[0], calmWakings: round(b), roughWakings: round(a) };
-  }
-  return best;
+  const average = (group: typeof recent) => group.reduce((sum, r) => sum + r.wakings, 0) / group.length;
+  const [best] = factors
+    .map(({ sides, test }) => {
+      const yes = recent.filter(test);
+      const no = recent.filter(r => !test(r));
+      return yes.length < 3 || no.length < 3 ? null : { sides, a: average(yes), b: average(no) };
+    })
+    .filter(f => f != null && Math.abs(f.a - f.b) >= 0.5)
+    .sort((x, y) => Math.abs(y!.b - y!.a) - Math.abs(x!.b - x!.a));
+  if (!best) return null;
+  const [calm, rough] = best.a < best.b ? best.sides : [best.sides[1], best.sides[0]];
+  return { calm, rough, calmWakings: tenths(Math.min(best.a, best.b)), roughWakings: tenths(Math.max(best.a, best.b)) };
 }

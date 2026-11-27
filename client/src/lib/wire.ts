@@ -24,7 +24,7 @@ const timeFields: Record<SyncedTable, string[]> = {
   events: ['Start', 'End', 'ActiveSince'],
   growth: ['MeasuredAt'],
   foods: ['LastUsedAt'],
-  settings: ['BabyBirthDate']
+  settings: []
 };
 
 type Row = Record<string, unknown>;

@@ -1,4 +1,5 @@
 import type { Pronouns, Settings } from './db.ts';
+import { fromDateInput } from './time.ts';
 
 const forms: Record<Pronouns, { they: string; their: string; theyre: string; theyve: string; plural: boolean }> = {
   She: { they: 'she', their: 'her', theyre: "she's", theyve: "she's", plural: false },
@@ -14,7 +15,7 @@ export const baby = $state({ name: 'Baby', born: null as number | null, ...forms
 
 export function useBaby(settings: Partial<Pick<Settings, 'BabyName' | 'BabyPronouns' | 'BabyBirthDate'>> | undefined) {
   Object.assign(baby, {
-    name: settings?.BabyName?.trim() || 'Baby', born: settings?.BabyBirthDate ?? null,
+    name: settings?.BabyName?.trim() || 'Baby', born: settings?.BabyBirthDate ? fromDateInput(settings.BabyBirthDate) : null,
     ...forms[settings?.BabyPronouns ?? 'They']
   });
 }

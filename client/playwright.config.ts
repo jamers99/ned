@@ -16,6 +16,8 @@ export default defineConfig({
     baseURL: 'http://localhost:5199',
     timezoneId: timezone,
     locale: 'en-US',
+    // The fake clock freezes animation frames, so out-transitions would never finish and closed sheets would linger.
+    reducedMotion: 'reduce',
     trace: 'retain-on-failure'
   },
   projects: [
