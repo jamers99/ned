@@ -160,11 +160,13 @@ export async function addSolids(foods: { name: string; category: FoodCategory }[
 /** Files a food under another category, saving it as a food first if it's an unused preset. */
 export async function setFoodCategory(name: string, category: FoodCategory) {
   const guid = await foodGuid(name.trim(), status.family);
-  const food: Food = await db.foods.get(guid) ?? {
-    Guid: guid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0,
-    Name: name.trim(), Category: category, LastUsedAt: null, UseCount: 0
-  };
-  await db.foods.put({ ...food, Category: category, dirty: editStamp() });
+  await db.transaction('rw', db.foods, async () => {
+    const food: Food = await db.foods.get(guid) ?? {
+      Guid: guid, ModifiedAt: '', Deleted: false, LoggedBy: status.user, dirty: 0,
+      Name: name.trim(), Category: category, LastUsedAt: null, UseCount: 0
+    };
+    await db.foods.put({ ...food, Category: category, dirty: editStamp() });
+  });
   scheduleSync();
 }
 
@@ -194,7 +196,10 @@ async function loadSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(changes: Partial<Settings>) {
-  const current = await loadSettings();
-  await db.settings.put({ ...current, ...changes, dirty: editStamp() });
+  // One transaction, so two quick changes (a date picked right after a pronoun) can't each undo the other.
+  await db.transaction('rw', db.settings, async () => {
+    const current = await loadSettings();
+    await db.settings.put({ ...current, ...changes, dirty: editStamp() });
+  });
   scheduleSync();
 }

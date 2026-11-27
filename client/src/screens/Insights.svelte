@@ -1,44 +1,71 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import { db, type BabyEvent } from '../lib/db.ts';
-  import { settledText } from '../lib/describe.ts';
-  import { bedtimeStats, bestLastWakeWindow, nightsNeededForPattern, stretchByMonth, wakingStats } from '../lib/insights.ts';
+  import { baby } from '../lib/baby.svelte.ts';
+  import {
+    bedtimeStats, feedSplit, goodNights, stretchByMonth, typicalNightFeeds, wakingsByWeek
+  } from '../lib/insights.ts';
   import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
-  import { clock as clockTime, duration } from '../lib/time.ts';
+  import type { SleepTargets } from '../lib/sleep.ts';
+  import { ageText, clock as clockTime, monthsOld, startOfDay } from '../lib/time.ts';
+
+  let { targets }: { targets: SleepTargets } = $props();
 
   const history = live(() => db.events.toArray(), [] as BabyEvent[]);
   const events = $derived(history.value.filter(e => !e.Deleted));
+  // These only change with the data or the date, so they follow the day rather than the 1s clock tick.
+  const today = $derived(startOfDay(clock.now));
 
-  const months = $derived(stretchByMonth(events));
-  const maxHours = $derived(Math.max(1, ...months.map(m => m.hours)));
-  const bedtime = $derived(bedtimeStats(events, clock.now));
-  const wakings = $derived(wakingStats(events, clock.now));
-  const pattern = $derived(bestLastWakeWindow(events));
+  const stretches = $derived(stretchByMonth(events).map(m => ({ label: m.label, value: m.hours, inner: 0 })));
+  const bedtime = $derived(bedtimeStats(events, today));
+  const weeks = $derived(wakingsByWeek(events, today)
+    .map(w => ({ label: w.label, value: w.perNight, inner: w.perNight ? w.fedPerNight / w.perNight : 0 })));
+  const feeds = $derived(feedSplit(events, today));
+  const nights = $derived(goodNights(events, targets, today));
+  const months = $derived(baby.born == null ? null : monthsOld(baby.born, today));
 </script>
 
+{#snippet bars(rows: { label: string; value: number; inner: number }[], empty: string)}
+  {#if rows.length}
+    {@const max = Math.max(1, ...rows.map(r => r.value))}
+    <div class="bars">
+      {#each rows as r, i (r.label + i)}
+        <div class="bar-column">
+          <span class="bar-value">{r.value.toFixed(1)}</span>
+          <div class="bar" class:latest={i === rows.length - 1} style:height="{(r.value / max) * 118}px">
+            {#if r.inner}<div class="inner" style:height="{r.inner * 100}%"></div>{/if}
+          </div>
+          <span class="bar-label">{r.label}</span>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <div class="muted">{empty}</div>
+  {/if}
+{/snippet}
+
 <div class="screen" in:appear|global>
-  <h1 class="serif">Insights</h1>
+  <div>
+    <h1 class="serif">Insights</h1>
+    {#if baby.born != null}<div class="muted">{baby.name} · {ageText(baby.born, clock.now)}</div>{/if}
+  </div>
 
   <section class="card chart">
     <div>
       <div class="serif card-title">Longest night stretch</div>
       <div class="muted">Typical hours between night feeds or wakings, by month</div>
     </div>
-    {#if months.length}
-      <div class="bars">
-        {#each months as m, i (m.label + i)}
-          <div class="bar-column">
-            <span class="bar-value">{m.hours.toFixed(1)}</span>
-            <div class="bar" class:latest={i === months.length - 1} style:height="{(m.hours / maxHours) * 118}px"></div>
-            <span class="bar-label">{m.label}</span>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div class="muted">Shows up once a few nights are logged.</div>
-    {/if}
+    {@render bars(stretches, 'Shows up once a few nights are logged.')}
+  </section>
+
+  <section class="card chart">
+    <div>
+      <div class="serif card-title">Night wakings</div>
+      <div class="muted">Per night, by week · highlighted: settled by a feed</div>
+    </div>
+    {@render bars(weeks, 'Shows up once a night is logged.')}
   </section>
 
   <div class="pair">
@@ -52,14 +79,13 @@
       {/if}
     </section>
     <section class="card stat">
-      <span class="stat-label">Night wakings · 7 days</span>
-      {#if wakings}
-        <span class="serif stat-value">{wakings.perNight} / night</span>
-        {#if wakings.top}
-          <span class="muted small">{wakings.topShare}% back by {settledText(wakings.top)}</span>
-        {/if}
+      <span class="stat-label">Feeds a day · 7 days</span>
+      {#if feeds}
+        <span class="serif stat-value">{feeds.day} by day</span>
+        <span class="muted small">{feeds.night} at night</span>
+        {#if months != null}<span class="muted small">Typical: {typicalNightFeeds(months)} at night</span>{/if}
       {:else}
-        <span class="muted small">Log a night to see this</span>
+        <span class="muted small">Log a couple of days</span>
       {/if}
     </section>
   </div>
@@ -67,20 +93,18 @@
   <section class="pattern">
     <div class="pattern-head">
       <Icon name="sprig" size={20} stroke="var(--moss-deep)" width={1.6} />
-      <span>A pattern</span>
+      <span>Calmer nights</span>
     </div>
-    {#if !pattern.ready}
-      <p class="serif quote">Which last wake window of the day leads to the calmest nights?</p>
-      <div class="pattern-note">
-        Unlocks after ~{nightsNeededForPattern} days of logged sleep · {pattern.nights} so far
-      </div>
-    {:else if pattern.from != null}
+    {#if months != null && months < 3}
+      <p class="serif quote">Nights follow feeds for now. What helps them starts to show after about 3 months.</p>
+    {:else if nights}
       <p class="serif quote">
-        Nights after a last wake window of {duration(pattern.from)}–{duration(pattern.to)} have fewer wakings than
-        shorter or longer ones.
+        Nights after {nights.calm}: {nights.calmWakings} wakings. After {nights.rough}: {nights.roughWakings}.
       </p>
+      <div class="pattern-note">Last 4 weeks</div>
     {:else}
-      <p class="serif quote">No last wake window stands out yet. Keep logging naps and nights.</p>
+      <p class="serif quote">What's different about the calmer nights?</p>
+      <div class="pattern-note">Shows up after a couple of weeks of naps and nights</div>
     {/if}
   </section>
 
@@ -153,10 +177,18 @@
     min-height: 4px;
     border-radius: 8px 8px 4px 4px;
     background: var(--moss-bar);
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
   }
 
   .bar.latest {
     background: var(--moss);
+  }
+
+  .inner {
+    width: 100%;
+    background: var(--moss-deep);
   }
 
   .bar-label {

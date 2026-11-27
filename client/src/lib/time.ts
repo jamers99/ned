@@ -106,6 +106,21 @@ export function withDateInput(ms: number, value: string): number {
   return date.getTime();
 }
 
+/** Whole calendar months from `born` to `now`. */
+export function monthsOld(born: number, now: number): number {
+  const b = new Date(born);
+  const n = new Date(now);
+  return (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth() - (n.getDate() < b.getDate() ? 1 : 0);
+}
+
+/** "3 weeks" for the first two months, then "8 months". */
+export function ageText(born: number, now: number): string {
+  const months = monthsOld(born, now);
+  const count = months < 2 ? Math.floor((now - born) / (7 * day)) : months;
+  const unit = months < 2 ? 'week' : 'month';
+  return `${count} ${unit}${count === 1 ? '' : 's'}`;
+}
+
 export function fromDateInput(value: string): number {
   const [y, m, d] = value.split('-').map(Number);
   return new Date(y, m - 1, d).getTime();
