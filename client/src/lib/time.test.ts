@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { duration, endAfter, hour, minute } from './time.ts';
+import { ageText, duration, endAfter, hour, minute, monthsOld } from './time.ts';
 
 const at = (dayOfMonth: number, h: number, m = 0) => new Date(2026, 9, dayOfMonth, h, m).getTime();
 
@@ -25,5 +25,15 @@ describe('durations', () => {
     expect(duration(42_000)).toBe('42s');
     expect(duration(minute)).toBe('1m');
     expect(duration(hour + 5 * minute)).toBe('1h 05m');
+  });
+});
+
+describe('age', () => {
+  const born = new Date(2026, 2, 17).getTime();
+  it('counts weeks for the first two months, then months', () => {
+    expect(ageText(born, new Date(2026, 3, 7).getTime())).toBe('3 weeks');
+    expect(ageText(born, new Date(2026, 10, 27).getTime())).toBe('8 months');
+    expect(ageText(born, new Date(2026, 10, 16).getTime())).toBe('7 months');
+    expect(monthsOld(born, new Date(2027, 2, 17).getTime())).toBe(12);
   });
 });

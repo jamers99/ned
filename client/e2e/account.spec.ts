@@ -6,8 +6,14 @@ test("the baby's name and pronouns come from Settings", async ({ app, page }) =>
   await page.getByPlaceholder('Baby').fill('Ollie');
   await page.getByPlaceholder('Baby').press('Enter');
   await app.button('They / them').click();
+  await page.getByLabel('Born').fill('2026-09-27');
   await expect(page.getByText('When they usually go down for the night.')).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
+
+  await app.button('Insights').click();
+  await expect(page.getByText('Ollie · 3 weeks')).toBeVisible();
+  await expect(page.getByText('Nights follow feeds for now.', { exact: false })).toBeVisible();
+  await app.button('Now').click();
 
   await expect(page.getByText('Ollie', { exact: true })).toBeVisible();
   await app.sleepButton.click();

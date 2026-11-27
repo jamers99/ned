@@ -68,6 +68,8 @@ export interface Settings extends Synced {
   /** Missing until a parent sets them; the app then says "Baby" and they. */
   BabyName?: string;
   BabyPronouns?: Pronouns;
+  /** Midnight on the day, local. */
+  BabyBirthDate?: number | null;
 }
 
 export interface Meta {

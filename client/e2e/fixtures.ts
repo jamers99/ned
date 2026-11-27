@@ -63,7 +63,8 @@ const growth: Growth[] = [
 
 const settings: Settings[] = [{
   ...synced, Guid: firstFamily, NapsPerDay: 2, NapWakeWindowMinutes: 150, BedtimeWakeWindowMinutes: 210,
-  NightStartMinutes: 20 * 60, NightEndMinutes: 6 * 60, BabyName: 'Kennedy', BabyPronouns: 'She'
+  NightStartMinutes: 20 * 60, NightEndMinutes: 6 * 60, BabyName: 'Kennedy', BabyPronouns: 'She',
+  BabyBirthDate: new Date(2026, 1, 18).getTime()
 }];
 
 /** Writes rows straight into the app's IndexedDB, then reloads so the app reads them. */

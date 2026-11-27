@@ -1,41 +1,48 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
   import { db, type BabyEvent } from '../lib/db.ts';
-  import { bedtimeStats, feedSplit, goodNights, stretchByMonth, wakingsByWeek } from '../lib/insights.ts';
+  import { baby } from '../lib/baby.svelte.ts';
+  import {
+    bedtimeStats, feedSplit, goodNights, monthsBeforeNightPatterns, stretchByMonth, typicalNightFeeds, wakingsByWeek
+  } from '../lib/insights.ts';
   import { appear } from '../lib/motion.ts';
   import { open } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
   import type { SleepTargets } from '../lib/sleep.ts';
-  import { clock as clockTime } from '../lib/time.ts';
+  import { ageText, clock as clockTime, monthsOld } from '../lib/time.ts';
 
   let { targets }: { targets: SleepTargets } = $props();
 
   const history = live(() => db.events.toArray(), [] as BabyEvent[]);
   const events = $derived(history.value.filter(e => !e.Deleted));
 
-  const months = $derived(stretchByMonth(events));
-  const maxHours = $derived(Math.max(1, ...months.map(m => m.hours)));
+  const stretches = $derived(stretchByMonth(events));
+  const maxHours = $derived(Math.max(1, ...stretches.map(m => m.hours)));
   const bedtime = $derived(bedtimeStats(events, clock.now));
   const weeks = $derived(wakingsByWeek(events, clock.now));
   const maxWakings = $derived(Math.max(1, ...weeks.map(w => w.perNight)));
   const feeds = $derived(feedSplit(events, clock.now));
   const nights = $derived(goodNights(events, targets, clock.now));
+  const months = $derived(baby.born == null ? null : monthsOld(baby.born, clock.now));
 </script>
 
 <div class="screen" in:appear|global>
-  <h1 class="serif">Insights</h1>
+  <div>
+    <h1 class="serif">Insights</h1>
+    {#if baby.born != null}<div class="muted">{baby.name} · {ageText(baby.born, clock.now)}</div>{/if}
+  </div>
 
   <section class="card chart">
     <div>
       <div class="serif card-title">Longest night stretch</div>
       <div class="muted">Typical hours between night feeds or wakings, by month</div>
     </div>
-    {#if months.length}
+    {#if stretches.length}
       <div class="bars">
-        {#each months as m, i (m.label + i)}
+        {#each stretches as m, i (m.label + i)}
           <div class="bar-column">
             <span class="bar-value">{m.hours.toFixed(1)}</span>
-            <div class="bar" class:latest={i === months.length - 1} style:height="{(m.hours / maxHours) * 118}px"></div>
+            <div class="bar" class:latest={i === stretches.length - 1} style:height="{(m.hours / maxHours) * 118}px"></div>
             <span class="bar-label">{m.label}</span>
           </div>
         {/each}
@@ -82,6 +89,7 @@
       {#if feeds}
         <span class="serif stat-value">{feeds.day} by day</span>
         <span class="muted small">{feeds.night} at night</span>
+        {#if months != null}<span class="muted small">Typical: {typicalNightFeeds(months)} at night</span>{/if}
       {:else}
         <span class="muted small">Log a couple of days</span>
       {/if}
@@ -93,7 +101,9 @@
       <Icon name="sprig" size={20} stroke="var(--moss-deep)" width={1.6} />
       <span>Calmer nights</span>
     </div>
-    {#if nights}
+    {#if months != null && months < monthsBeforeNightPatterns}
+      <p class="serif quote">Nights follow feeds for now. What helps them starts to show after about 3 months.</p>
+    {:else if nights}
       <p class="serif quote">
         Nights after {nights.calm}: {nights.calmWakings} wakings. After {nights.rough}: {nights.roughWakings}.
       </p>

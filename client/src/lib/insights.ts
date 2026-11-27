@@ -126,10 +126,11 @@ export function wakingsByWeek(events: BabyEvent[], now: number): { label: string
 const isFeed = (e: BabyEvent) => e.Type === 'Feed' && !e.Deleted;
 const duringNight = (ms: number, nights: Night[]) => nights.some(n => n.pieces.some(p => ms >= p.Start && ms < p.End!));
 
-/** Feeds per day over the last week: by day, and during a logged night. */
+/** Feeds per day over the last seven whole days: by day, and during a logged night. */
 export function feedSplit(events: BabyEvent[], now: number): { day: number; night: number } | null {
   const nights = loggedNights(events);
-  const feeds = events.filter(e => isFeed(e) && e.Start > now - 7 * day);
+  const today = startOfDay(now);
+  const feeds = events.filter(e => isFeed(e) && e.Start >= today - 7 * day && e.Start < today);
   const days = new Set(feeds.map(feed => startOfDay(feed.Start))).size;
   if (days < 2) return null;
   const atNight = feeds.filter(feed => duringNight(feed.Start, nights)).length;
@@ -141,16 +142,33 @@ export function feedSplit(events: BabyEvent[], now: number): { day: number; nigh
  * Of a few things about the day before (naps, bedtime, day feeds), the one whose nights differ most in
  * wakings over the last four weeks, with the calmer side first. Needs three nights on each side.
  */
+/** How many night feeds most babies still take at this age: a rough guide, not a rule. */
+export function typicalNightFeeds(months: number): string {
+  if (months < 2) return '2–4';
+  if (months < 4) return '1–3';
+  if (months < 6) return '1–2';
+  if (months < 9) return '0–1';
+  return '0';
+}
+
+/** Under about three months nights follow feeds, not the day before, so there is nothing to compare yet. */
+export const monthsBeforeNightPatterns = 3;
+
 export function goodNights(events: BabyEvent[], targets: Pick<SleepTargets, 'NapsPerDay' | 'NightStartMinutes'>, now: number) {
   const live = events.filter(e => !e.Deleted);
   const nights = loggedNights(live);
   const naps = live.filter(e => e.Type === 'Sleep' && !e.IsNight && e.End != null);
   const feeds = live.filter(isFeed);
   const bedtime = clockText(atMinuteOfDay(now, targets.NightStartMinutes));
+  const recent = nights.filter(night => night.start > now - 28 * day);
+  // Babies take fewer feeds as they grow, so split at this baby's usual count rather than a fixed one.
+  const dayFeeds = (night: Night) =>
+    feeds.filter(f => f.Start < night.start && f.Start > night.start - 14 * hour && !duringNight(f.Start, nights)).length;
+  const usualFeeds = recent.length ? Math.ceil(median(recent.map(dayFeeds))) : 0;
 
   const factors: { sides: [string, string]; test: (night: Night) => boolean }[] = [
     {
-      sides: [`${targets.NapsPerDay} naps or fewer`, `${targets.NapsPerDay + 1}+ naps`],
+      sides: [`${targets.NapsPerDay} ${targets.NapsPerDay === 1 ? 'nap' : 'naps'} or fewer`, `${targets.NapsPerDay + 1}+ naps`],
       test: night => naps.filter(nap => nap.End! <= night.start && nap.Start > night.start - 14 * hour).length <= targets.NapsPerDay
     },
     {
@@ -161,12 +179,10 @@ export function goodNights(events: BabyEvent[], targets: Pick<SleepTargets, 'Nap
       }
     },
     {
-      sides: ['4+ day feeds', 'fewer day feeds'],
-      test: night => feeds.filter(f => f.Start < night.start && f.Start > night.start - 14 * hour && !duringNight(f.Start, nights)).length >= 4
+      sides: [`${usualFeeds}+ day feeds`, 'fewer day feeds'],
+      test: night => dayFeeds(night) >= usualFeeds
     }
   ];
-
-  const recent = nights.filter(night => night.start > now - 28 * day);
   const average = (group: Night[]) => group.reduce((sum, night) => sum + wakingsIn(night, live).length, 0) / group.length;
   let best: { calm: string; rough: string; calmWakings: number; roughWakings: number } | null = null;
   for (const { sides, test } of factors) {

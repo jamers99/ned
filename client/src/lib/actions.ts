@@ -194,7 +194,10 @@ async function loadSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(changes: Partial<Settings>) {
-  const current = await loadSettings();
-  await db.settings.put({ ...current, ...changes, dirty: editStamp() });
+  // One transaction, so two quick changes (a date picked right after a pronoun) can't each undo the other.
+  await db.transaction('rw', db.settings, async () => {
+    const current = await loadSettings();
+    await db.settings.put({ ...current, ...changes, dirty: editStamp() });
+  });
   scheduleSync();
 }
