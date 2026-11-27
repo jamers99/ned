@@ -55,7 +55,7 @@
     {:else if nav.tab === 'day'}
       <Day />
     {:else}
-      <Insights />
+      <Insights {targets} />
     {/if}
     <TabBar />
   </main>

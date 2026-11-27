@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BabyEvent } from './db.ts';
-import { bedtimeStats, wakingStats } from './insights.ts';
+import { bedtimeStats, feedSplit, goodNights, wakingsByWeek } from './insights.ts';
 
 const at = (dayOfMonth: number, time: string) => {
   const [h, m] = time.split(':').map(Number);
@@ -43,6 +43,38 @@ describe('nights logged in pieces', () => {
   });
 
   it('count as one night for wakings per night', () => {
-    expect(wakingStats(week, now)?.perNight).toBe(Math.round((1 / 6) * 10) / 10);
+    expect(wakingsByWeek(week, now).at(-1)).toMatchObject({ perNight: 0.2, fedPerNight: 0.2 });
+  });
+});
+
+const feed = (dayOfMonth: number, time: string) => event({ Type: 'Feed', FeedKind: 'Nursing', Start: at(dayOfMonth, time) });
+
+describe('feeds a day', () => {
+  it('count the ones during a night apart', () => {
+    const days = [12, 13, 14].flatMap(d => [
+      night([d, '20:00'], [d + 1, '06:00']), feed(d + 1, '02:00'), feed(d + 1, '07:00'), feed(d + 1, '11:00')
+    ]);
+    expect(feedSplit(days, at(15, '12:00'))).toEqual({ day: 2, night: 1 });
+  });
+});
+
+describe('calmer nights', () => {
+  const targets = { NapsPerDay: 2, NightStartMinutes: 20 * 60 + 30 };
+  const waking = (d: number) => event({ Type: 'NightWaking', Start: at(d, '02:00'), End: at(d, '02:15') });
+  const nap = (d: number, time: string) => event({ Type: 'Sleep', Start: at(d, time), End: at(d, time) + 45 * 60_000 });
+
+  it('compare nights after the planned naps with nights after more', () => {
+    const days = [1, 2, 3, 4, 5, 6].flatMap(d => [
+      nap(d, '09:00'), nap(d, '13:00'), ...(d > 3 ? [nap(d, '16:30'), waking(d + 1), waking(d + 1)] : []),
+      night([d, '20:00'], [d + 1, '06:30'])
+    ]);
+    expect(goodNights(days, targets, at(7, '12:00'))).toEqual({
+      calm: '2 naps or fewer', rough: '3+ naps', calmWakings: 0, roughWakings: 2
+    });
+  });
+
+  it('say nothing until both sides have a few nights', () => {
+    const days = [1, 2, 3].flatMap(d => [nap(d, '09:00'), night([d, '20:00'], [d + 1, '06:30'])]);
+    expect(goodNights(days, targets, at(4, '12:00'))).toBeNull();
   });
 });
