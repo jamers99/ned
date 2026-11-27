@@ -1,15 +1,16 @@
 <script lang="ts">
   import Icon from '../components/Icon.svelte';
+  import InsightSheet from './InsightSheet.svelte';
   import { db, type BabyEvent } from '../lib/db.ts';
   import { baby } from '../lib/baby.svelte.ts';
   import {
     bedtimeStats, feedSplit, goodNights, stretchByMonth, typicalNightFeeds, wakingsByWeek
   } from '../lib/insights.ts';
   import { appear } from '../lib/motion.ts';
-  import { open } from '../lib/nav.svelte.ts';
+  import { nav, open, type InsightCard } from '../lib/nav.svelte.ts';
   import { clock, live } from '../lib/state.svelte.ts';
   import type { SleepTargets } from '../lib/sleep.ts';
-  import { ageText, clock as clockTime, monthsOld, startOfDay } from '../lib/time.ts';
+  import { addDays, ageText, clock as clockTime, monthsOld, startOfDay } from '../lib/time.ts';
 
   let { targets }: { targets: SleepTargets } = $props();
 
@@ -25,6 +26,10 @@
   const feeds = $derived(feedSplit(events, today));
   const nights = $derived(goodNights(events, targets, today));
   const months = $derived(baby.born == null ? null : monthsOld(baby.born, today));
+  const typical = $derived(months == null ? null : typicalNightFeeds(months));
+  const solids = $derived(events.filter(e => e.Type === 'Solids' && e.Start >= addDays(today, -7)).length);
+
+  const show = (card: InsightCard) => open({ kind: 'insight', card });
 </script>
 
 {#snippet bars(rows: { label: string; value: number; inner: number }[], empty: string)}
@@ -52,24 +57,24 @@
     {#if baby.born != null}<div class="muted">{baby.name} · {ageText(baby.born, clock.now)}</div>{/if}
   </div>
 
-  <section class="card chart">
+  <button class="card chart" onclick={() => show('stretch')}>
     <div>
       <div class="serif card-title">Longest night stretch</div>
       <div class="muted">Typical hours between night feeds or wakings, by month</div>
     </div>
     {@render bars(stretches, 'Shows up once a few nights are logged.')}
-  </section>
+  </button>
 
-  <section class="card chart">
+  <button class="card chart" onclick={() => show('wakings')}>
     <div>
       <div class="serif card-title">Night wakings</div>
       <div class="muted">Per night, by week · highlighted: settled by a feed</div>
     </div>
     {@render bars(weeks, 'Shows up once a night is logged.')}
-  </section>
+  </button>
 
   <div class="pair">
-    <section class="card stat">
+    <button class="card stat" onclick={() => show('bedtime')}>
       <span class="stat-label">Avg bedtime · 7 days</span>
       {#if bedtime}
         <span class="serif stat-value">{clockTime(bedtime.average)}</span>
@@ -77,20 +82,20 @@
       {:else}
         <span class="muted small">Log a couple of nights</span>
       {/if}
-    </section>
-    <section class="card stat">
+    </button>
+    <button class="card stat" onclick={() => show('feeds')}>
       <span class="stat-label">Feeds a day · 7 days</span>
       {#if feeds}
         <span class="serif stat-value">{feeds.day} by day</span>
         <span class="muted small">{feeds.night} at night</span>
-        {#if months != null}<span class="muted small">Typical: {typicalNightFeeds(months)} at night</span>{/if}
+        {#if typical}<span class="muted small">Typical: {typical[0] === typical[1] ? typical[0] : `${typical[0]}–${typical[1]}`} at night</span>{/if}
       {:else}
         <span class="muted small">Log a couple of days</span>
       {/if}
-    </section>
+    </button>
   </div>
 
-  <section class="pattern">
+  <button class="pattern" onclick={() => show('nights')}>
     <div class="pattern-head">
       <Icon name="sprig" size={20} stroke="var(--moss-deep)" width={1.6} />
       <span>Calmer nights</span>
@@ -106,7 +111,7 @@
       <p class="serif quote">What's different about the calmer nights?</p>
       <div class="pattern-note">Shows up after a couple of weeks of naps and nights</div>
     {/if}
-  </section>
+  </button>
 
   <button class="card growth" onclick={() => open({ kind: 'growth' })}>
     <Icon name="ruler" stroke="var(--moss)" />
@@ -115,9 +120,21 @@
   </button>
 </div>
 
+<!-- Tapping a card explains it, like the wake window on Now. -->
+{#if nav.overlay?.kind === 'insight'}
+  <InsightSheet card={nav.overlay.card} {stretches} {weeks} {bedtime} {feeds} {nights} {typical} {solids} {targets}
+    age={baby.born == null ? null : ageText(baby.born, today)} />
+{/if}
+
 <style>
   .screen {
     gap: 14px;
+  }
+
+  .card,
+  .pattern {
+    width: 100%;
+    text-align: left;
   }
 
   h1 {
@@ -223,6 +240,7 @@
   }
 
   .pattern {
+    border: 0;
     background: var(--moss-soft);
     border-radius: 22px;
     padding: 16px 18px;

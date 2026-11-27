@@ -1,6 +1,7 @@
 import { startOfDay } from './time.ts';
 
 export type Tab = 'now' | 'day' | 'insights';
+export type InsightCard = 'stretch' | 'wakings' | 'bedtime' | 'feeds' | 'nights';
 
 // `back` is the overlay to return to on close, e.g. the sleep drawer after a feed during a night waking.
 export type Overlay = (
@@ -11,6 +12,7 @@ export type Overlay = (
   | { kind: 'note' }
   | { kind: 'woke'; guid: string }
   | { kind: 'edit'; guid: string }
+  | { kind: 'insight'; card: InsightCard }
   | { kind: 'growth' }
   | { kind: 'settings' }
   | { kind: 'signin' }

@@ -140,12 +140,12 @@ export function feedSplit(events: BabyEvent[], now: number): { day: number; nigh
 }
 
 /** How many night feeds most babies still take at this age: a rough guide, not a rule. */
-export function typicalNightFeeds(months: number): string {
-  if (months < 2) return '2–4';
-  if (months < 4) return '1–3';
-  if (months < 6) return '1–2';
-  if (months < 9) return '0–1';
-  return '0';
+export function typicalNightFeeds(months: number): [number, number] {
+  if (months < 2) return [2, 4];
+  if (months < 4) return [1, 3];
+  if (months < 6) return [1, 2];
+  if (months < 9) return [0, 1];
+  return [0, 0];
 }
 
 /**

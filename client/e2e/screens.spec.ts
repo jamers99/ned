@@ -65,6 +65,9 @@ test('day colors', async ({ app, page }) => {
 
   await app.button('Insights').click();
   await shot('insights');
+  await page.locator('.stat', { hasText: 'Feeds a day' }).click();
+  await shot('insight-feeds');
+  await app.button('Got it').click();
   await app.button('Growth').click();
   await shot('growth');
   await app.button('Close').click();
@@ -118,6 +121,8 @@ test.describe(() => {
     await app.done();
     await app.button('Insights').click();
     await shot('insights');
+    await page.locator('.chart', { hasText: 'Night wakings' }).click();
+    await shot('insight-wakings');
   });
 });
 
