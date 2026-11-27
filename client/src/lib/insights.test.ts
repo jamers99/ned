@@ -107,13 +107,13 @@ describe('from newborn to one year', () => {
     expect(feedSplit(rows, now)).toEqual({ day: 6, night: 3 });
     expect(wakingsByWeek(rows, now).at(-1)).toMatchObject({ perNight: 3, fedPerNight: 3 });
     expect(goodNights(rows, targets(5), now)).toBeNull();
-    expect(typicalNightFeeds(0)).toBe('2–4');
+    expect(typicalNightFeeds(0)).toEqual([2, 4]);
   });
 
   it('eight months: extra naps show up as rougher nights', () => {
     const rows = routine({ dayFeeds: ['07:00', '11:00', '15:00', '19:00'], naps: ['09:30', '13:30'], wakings: 1, extraNapEvery: 3 });
     expect(goodNights(rows, targets(2), now)).toMatchObject({ calm: '2 naps or fewer', rough: '3+ naps', calmWakings: 1, roughWakings: 3 });
-    expect(typicalNightFeeds(8)).toBe('0–1');
+    expect(typicalNightFeeds(8)).toEqual([0, 1]);
   });
 
   it('one year: one nap, no night feeds, and nothing to compare', () => {
@@ -121,7 +121,7 @@ describe('from newborn to one year', () => {
     expect(feedSplit(rows, now)).toEqual({ day: 4, night: 0 });
     expect(wakingsByWeek(rows, now).at(-1)).toMatchObject({ perNight: 0, fedPerNight: 0 });
     expect(goodNights(rows, targets(1), now)).toBeNull();
-    expect(typicalNightFeeds(12)).toBe('0');
+    expect(typicalNightFeeds(12)).toEqual([0, 0]);
   });
 
   it('one nap reads as one nap', () => {
